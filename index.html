@@ -83,7 +83,7 @@
   #active-user { font-size: 13px; color: var(--gold); font-weight: 500; }
 
   /* PAGES */
-  .page { display: none; padding: 1.5rem 1rem; max-width: 1100px; margin: 0 auto; }
+  .page { display: none; padding: 1.5rem 1rem 90px; max-width: 1100px; margin: 0 auto; }
   .page.active { display: block; }
 
   /* GROUP STAGE */
@@ -275,9 +275,155 @@
     text-transform: uppercase;
   }
 
+  /* MESSAGE BOARD */
+  #chat-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; height: 52px;
+  }
+  #chat-toggle-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--pitch); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: .5px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    transition: background .15s;
+  }
+  #chat-toggle-btn:hover { background: var(--pitch-light); }
+  #chat-toggle-btn .chat-count {
+    background: var(--gold); color: #111; border-radius: 10px;
+    padding: 1px 6px; font-size: 10px; font-weight: 700; min-width: 18px; text-align: center;
+  }
+  #chat-bar-input-wrap {
+    display: flex; flex: 1; gap: 8px; align-items: center;
+  }
+  #chat-bar-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 12px; border-radius: 20px;
+    font-size: 13px; font-family: 'Barlow', sans-serif;
+  }
+  #chat-bar-input:focus { outline: none; border-color: var(--gold); }
+  #chat-bar-input::placeholder { color: var(--muted); }
+  #chat-bar-send {
+    background: var(--gold); color: #111; border: none; padding: 7px 16px;
+    border-radius: 20px; font-size: 12px; font-weight: 700;
+    font-family: 'Barlow Condensed', sans-serif; letter-spacing: .5px;
+    text-transform: uppercase; cursor: pointer; flex-shrink: 0;
+  }
+  #chat-bar-send:hover { opacity: .85; }
+  #chat-panel {
+    position: fixed; bottom: 52px; left: 0; right: 0; z-index: 199;
+    background: var(--surface); border-top: 1px solid var(--border);
+    height: 360px; max-height: 60vh;
+    display: flex; flex-direction: column;
+    transform: translateY(100%); transition: transform .25s ease;
+  }
+  #chat-panel.open { transform: translateY(0); }
+  #chat-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #chat-panel-header h3 {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px;
+    font-weight: 700; letter-spacing: .5px; color: var(--gold);
+  }
+  #chat-close-btn {
+    background: none; border: none; color: var(--muted); font-size: 18px;
+    cursor: pointer; padding: 0 4px; line-height: 1;
+  }
+  #chat-messages {
+    flex: 1; overflow-y: auto; padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #chat-messages::-webkit-scrollbar { width: 4px; }
+  #chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .chat-msg {
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .chat-msg.mine { flex-direction: row-reverse; }
+  .chat-msg.mine .chat-bubble {
+    background: var(--pitch); border-color: var(--pitch-light);
+    border-bottom-right-radius: 4px; border-bottom-left-radius: 14px;
+  }
+  .chat-msg.mine .chat-meta { text-align: right; }
+  .chat-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--pitch-light); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--gold);
+    flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif;
+  }
+  .chat-bubble {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px; padding: 7px 11px;
+    max-width: 75%; word-break: break-word;
+  }
+  .chat-meta {
+    font-size: 10px; color: var(--muted); margin-bottom: 3px;
+  }
+  .chat-meta strong { color: var(--text); font-size: 11px; }
+  .chat-text { font-size: 13px; line-height: 1.4; }
+  .chat-empty {
+    text-align: center; color: var(--muted); font-size: 13px;
+    padding: 2rem 1rem; margin: auto;
+  }
+  .chat-unread-badge {
+    display: none; position: absolute; top: -4px; right: -4px;
+    background: #e74c3c; color: #fff; border-radius: 8px;
+    font-size: 9px; font-weight: 700; padding: 1px 4px; min-width: 14px; text-align: center;
+  }
+  #chat-toggle-btn { position: relative; }
+
+  /* GIF POPUP */
+  #gif-popup-overlay {
+    position: fixed; inset: 0; z-index: 8000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0); pointer-events: none;
+    transition: background .2s;
+  }
+  #gif-popup-overlay.visible {
+    background: rgba(0,0,0,.55); pointer-events: all;
+  }
+  #gif-popup {
+    background: var(--surface2); border: 2px solid var(--gold);
+    border-radius: 14px; padding: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    max-width: 340px; width: 90%;
+    transform: scale(0.7); opacity: 0;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
+  }
+  #gif-popup-overlay.visible #gif-popup {
+    transform: scale(1); opacity: 1;
+  }
+  #gif-popup-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 700; letter-spacing: .5px;
+    color: var(--gold); text-align: center;
+  }
+  #gif-popup img {
+    width: 100%; border-radius: 8px; display: block;
+    max-height: 220px; object-fit: cover;
+  }
+  #gif-popup-dismiss {
+    background: var(--gold); color: #111; border: none;
+    padding: 8px 28px; border-radius: 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; cursor: pointer;
+  }
+  #gif-popup-dismiss:hover { opacity: .85; }
+
+  /* FIREWORKS */
+  #fireworks-canvas {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    width: 100%; height: 100%;
+  }
+
   /* TOAST */
   .toast {
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 66px; left: 50%; transform: translateX(-50%);
     background: var(--pitch-light); color: var(--text); border: 1px solid var(--gold);
     padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 500;
     z-index: 300; transition: opacity .3s;
@@ -304,6 +450,7 @@
   .legend-dot.green { background: #27ae60; }
   .legend-dot.yellow { background: #f1c40f; }
   .legend-dot.gray { background: #555; }
+  .legend-icon { font-size: 15px; line-height: 1; flex-shrink: 0; }
 
   .progress-bar {
     height: 3px; background: rgba(255,255,255,.1); border-radius: 2px; margin-top: 8px;
@@ -539,14 +686,17 @@
     <button class="active" onclick="showPage('groups')">Group Stage</button>
     <button onclick="showPage('knockout')">Knockout</button>
     <button onclick="showPage('leaderboard')">Leaderboard</button>
+    <button onclick="showPage('about')">About</button>
     <button id="admin-nav-btn" class="admin-btn" onclick="showPage('admin')" style="display:none">&#9881; Admin</button>
   </nav>
 </header>
 
 <div id="identity-bar">
-  <span id="active-user" style="font-size:13px;color:var(--gold);font-weight:500"></span>
+  <span style="font-size:12px;color:var(--muted)">All Group Stage and Knockout picks must be in before June 11, 2026 at 3pm ET.</span>
+  <span id="active-user" style="font-size:13px;color:var(--gold);font-weight:500;margin-left:12px"></span>
   <span id="tournament-lock" style="display:none;font-size:12px;color:#e74c3c;margin-left:8px">&#128274; Bracket locked — tournament has started</span>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <button id="btn-editname" style="display:none;background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-family:Barlow Condensed,sans-serif;font-weight:600;letter-spacing:.5px" onclick="openAuthModal('editname')">Edit name</button>
     <button id="btn-logout" style="display:none;background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-family:Barlow Condensed,sans-serif;font-weight:600;letter-spacing:.5px" onclick="logout()">Log out</button>
     <button id="btn-login-open" style="background:var(--gold);color:#111;border:none;padding:5px 14px;border-radius:4px;font-size:12px;font-weight:600;font-family:Barlow Condensed,sans-serif;letter-spacing:.5px;text-transform:uppercase;cursor:pointer" onclick="openAuthModal('login')">Log in / Register</button>
   </div>
@@ -556,13 +706,13 @@
 <div id="page-groups" class="page active">
   <div class="page-header">
     <h1>Group Stage Predictions</h1>
-    <p>Predict the exact score for all 72 group stage matches</p>
+    <p>Welcome to the 2026 World Cup Predictor. Please select the score of all group games (wins, draws, and losses allowed) then select the winner of each knockout match starting with the Round of 32 that will automatically populate opponents based on your predicted group results.</p>
   </div>
   <div class="score-legend">
-    <div class="legend-item"><div class="legend-dot green"></div>Exact score (+10 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>Correct result (+10 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>One correct team score (+5 pts)</div>
-    <div class="legend-item"><div class="legend-dot gray"></div>Wrong (0 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#127942;</span>Exact score (+10 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result (+10 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#129000;</span>One correct team score (+5 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#127; </span>Wrong (0 pts)</div>
   </div>
   <div id="groups-grid" class="groups-grid"></div>
 </div>
@@ -574,12 +724,14 @@
     <p>Teams are auto-filled from your group stage predictions. Click any match to predict the score — winners advance automatically.</p>
   </div>
   <div class="score-legend">
-    <div class="legend-item"><div class="legend-dot green"></div>Exact score (+10 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>Correct result R16 (+30 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>Correct result QF (+40 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>Correct result SF/Final (+100 pts)</div>
-    <div class="legend-item"><div class="legend-dot yellow"></div>One correct team score (+5 pts)</div>
-    <div class="legend-item"><div class="legend-dot gray"></div>Wrong (0 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#127942;</span>Exact score (+10 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result R32 (+20 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result R16 (+30 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result QF (+40 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result SF (+50 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#127775;</span>Correct result Final (+100 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#129000;</span>One correct team score (+5 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#127; </span>Wrong (0 pts)</div>
   </div>
   <div id="bracket-notice" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:1.5rem;font-size:13px;color:var(--muted)">
     <span style="color:var(--gold);font-weight:600">&#9888; Incomplete group predictions</span> — fill in more group stage scores to populate the full bracket.
@@ -596,6 +748,33 @@
     <p>Scores update as actual results come in</p>
   </div>
   <div id="leaderboard-content"></div>
+</div>
+
+<!-- ABOUT PAGE -->
+<div id="page-about" class="page">
+  <div class="page-header">
+    <h1>About This</h1>
+  </div>
+  <div style="max-width:640px;margin:0 auto">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;font-size:15px;line-height:1.75;color:var(--text)">
+      <div style="font-size:48px;text-align:center;margin-bottom:1.25rem">&#127942;&#127760;&#9917;</div>
+      <p style="margin-bottom:1.25rem">Welcome to the 2026 World Cup Predictor! Though I haven't yet won the FIFA Peace Prize, this is my attempt to spread joy and turn casual fans into degenerate gamblers glued to their screens rooting for Cura&ccedil;ao to upset Germany.</p>
+      <p style="margin-bottom:1.5rem">For those interested, please send Riley <strong style="color:var(--gold)">(<a href="https://venmo.com/RileyYoungman" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline">Venmo @RileyYoungman</a>)</strong> $10.</p>
+      <div style="background:var(--pitch);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:0">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem">&#127942; Prize Structure</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">&#129352;</span>
+            <span><strong style="color:var(--gold)">1st place</strong> — receives the remainder of the pot</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:22px">&#129353;</span>
+            <span><strong style="color:var(--text)">2nd place</strong> — gets their $10 back</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ADMIN PAGE -->
@@ -635,6 +814,8 @@
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
         <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+        <button class="auth-tab" id="tab-reset" onclick="switchAuthTab('reset')" style="display:none">Reset</button>
+        <button class="auth-tab" id="tab-editname" onclick="switchAuthTab('editname')" style="display:none">Edit name</button>
       </div>
       <!-- LOGIN FORM -->
       <div id="auth-login-form">
@@ -674,9 +855,6 @@
         <button class="auth-btn" onclick="doRegister()">Create account</button>
         <p class="auth-hint">Already registered? <a onclick="switchAuthTab('login')">Log in</a></p>
       </div>
-    </div>
-  </div>
-</div>
 
 <!-- LOCKED BANNERS (shown on group/knockout pages after tournament starts) -->
 <div id="locked-banner-groups" class="locked-banner">
@@ -696,6 +874,8 @@
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
         <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+        <button class="auth-tab" id="tab-reset" onclick="switchAuthTab('reset')" style="display:none">Reset</button>
+        <button class="auth-tab" id="tab-editname" onclick="switchAuthTab('editname')" style="display:none">Edit name</button>
       </div>
       <div id="auth-login-form">
         <div class="auth-field"><label>Email or phone number</label>
@@ -705,7 +885,7 @@
             onkeydown="if(event.key==='Enter')doLogin()"></div>
         <div id="login-err" class="auth-err"></div>
         <button class="auth-btn" onclick="doLogin()">Log in</button>
-        <p class="auth-hint">No account? <a onclick="switchAuthTab('register')">Register here</a></p>
+        <p class="auth-hint">No account? <a onclick="switchAuthTab('register')">Register here</a> &nbsp;&bull;&nbsp; <a onclick="switchAuthTab('reset')">Forgot password?</a></p>
       </div>
       <div id="auth-register-form" style="display:none">
         <div class="auth-field"><label>Display name</label>
@@ -720,6 +900,42 @@
         <div id="reg-err" class="auth-err"></div>
         <button class="auth-btn" onclick="doRegister()">Create account</button>
         <p class="auth-hint">Already registered? <a onclick="switchAuthTab('login')">Log in</a></p>
+      </div>
+
+      <!-- RESET PASSWORD FORM -->
+      <div id="auth-reset-form" style="display:none">
+        <div id="reset-step1">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">Enter your registered email or phone. We'll generate a reset code — ask the admin to share it with you, or if your email is registered, it appears in the admin panel.</p>
+          <div class="auth-field"><label>Email or phone number</label>
+            <input id="reset-id" type="text" placeholder="you@example.com or 555-1234"></div>
+          <div id="reset-err1" class="auth-err"></div>
+          <button class="auth-btn" onclick="doRequestReset()">Send reset code</button>
+        </div>
+        <div id="reset-step2" style="display:none">
+          <p style="font-size:13px;color:var(--gold);margin-bottom:1rem">A reset code has been generated. Check with the admin or your email for the code.</p>
+          <div class="auth-field"><label>Reset code</label>
+            <input id="reset-code" type="text" placeholder="Enter your reset code" style="letter-spacing:2px;text-transform:uppercase" maxlength="8"></div>
+          <div class="auth-field"><label>New password</label>
+            <input id="reset-newpw" type="password" placeholder="New password (min 6 chars)"></div>
+          <div class="auth-field"><label>Confirm new password</label>
+            <input id="reset-newpw2" type="password" placeholder="Repeat new password"
+              onkeydown="if(event.key==='Enter')doConfirmReset()"></div>
+          <div id="reset-err2" class="auth-err"></div>
+          <button class="auth-btn" onclick="doConfirmReset()">Reset password</button>
+        </div>
+        <p class="auth-hint"><a onclick="switchAuthTab('login')">Back to login</a></p>
+      </div>
+
+      <!-- EDIT NAME FORM -->
+      <div id="auth-editname-form" style="display:none">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">Change the display name shown on the leaderboard.</p>
+        <div class="auth-field"><label>New display name</label>
+          <input id="editname-input" type="text" placeholder="Your new display name" maxlength="30"
+            onkeydown="if(event.key==='Enter')doEditName()"></div>
+        <div id="editname-err" class="auth-err"></div>
+        <div id="editname-ok" class="auth-ok"></div>
+        <button class="auth-btn" onclick="doEditName()">Save name</button>
+        <p class="auth-hint"><a onclick="closeAuthModal()">Close</a></p>
       </div>
     </div>
   </div>
@@ -742,11 +958,30 @@
       </div>
     </div>
     <div class="score-row">
-      <input id="modal-score1" type="number" min="0" max="30" value="0">
+      <input id="modal-score1" type="number" min="0" max="30" value="0" oninput="onModalScoreChange()">
       <span style="color: var(--muted); font-size: 20px; font-weight: 700;">—</span>
-      <input id="modal-score2" type="number" min="0" max="30" value="0">
+      <input id="modal-score2" type="number" min="0" max="30" value="0" oninput="onModalScoreChange()">
     </div>
-    <div class="btn-row">
+    <div id="modal-pen-section" style="display:none;margin-top:4px;border-top:1px solid rgba(255,255,255,.08);padding-top:12px">
+      <div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:600;text-align:center;margin-bottom:8px">Penalty shootout winner</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px">
+        <div style="text-align:center;flex:1">
+          <div id="modal-pen-team1" style="font-size:11px;color:var(--muted);margin-bottom:4px"></div>
+          <input id="modal-pen1" type="number" min="0" max="30" value="5"
+            style="width:52px;height:36px;background:var(--surface);border:1px solid rgba(201,168,76,.4);border-radius:6px;color:var(--gold);text-align:center;font-size:18px;font-family:Barlow Condensed,sans-serif;font-weight:700"
+            oninput="onPenScoreChange()">
+        </div>
+        <span style="color:var(--muted);font-size:14px;font-weight:700">–</span>
+        <div style="text-align:center;flex:1">
+          <div id="modal-pen-team2" style="font-size:11px;color:var(--muted);margin-bottom:4px"></div>
+          <input id="modal-pen2" type="number" min="0" max="30" value="4"
+            style="width:52px;height:36px;background:var(--surface);border:1px solid rgba(201,168,76,.4);border-radius:6px;color:var(--gold);text-align:center;font-size:18px;font-family:Barlow Condensed,sans-serif;font-weight:700"
+            oninput="onPenScoreChange()">
+        </div>
+      </div>
+      <div id="modal-pen-winner" style="text-align:center;font-size:12px;color:var(--gold);margin-top:8px;font-weight:600"></div>
+    </div>
+    <div class="btn-row" style="margin-top:14px">
       <button class="btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn-save" onclick="saveModalPrediction()">Save Prediction</button>
     </div>
@@ -754,6 +989,44 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
+
+<!-- GIF POPUP -->
+<div id="gif-popup-overlay" onclick="dismissGifPopup()">
+  <div id="gif-popup" onclick="event.stopPropagation()">
+    <div id="gif-popup-label">Are you sure about that? 🤔</div>
+    <img id="gif-popup-img" src="" alt="reaction gif">
+    <button id="gif-popup-dismiss" onclick="dismissGifPopup()">I'm sure!</button>
+  </div>
+</div>
+
+<!-- FIREWORKS CANVAS -->
+<canvas id="fireworks-canvas"></canvas>
+
+
+<!-- MESSAGE BOARD PANEL -->
+<div id="chat-panel">
+  <div id="chat-panel-header">
+    <h3>&#128172; Message Board</h3>
+    <button id="chat-close-btn" onclick="toggleChat()" aria-label="Close">&times;</button>
+  </div>
+  <div id="chat-messages">
+    <div class="chat-empty">Loading messages&hellip;</div>
+  </div>
+</div>
+
+<!-- CHAT BAR -->
+<div id="chat-bar">
+  <button id="chat-toggle-btn" onclick="toggleChat()">
+    &#128172; Chat
+    <span class="chat-count" id="chat-msg-count">0</span>
+    <span class="chat-unread-badge" id="chat-unread-badge">0</span>
+  </button>
+  <div id="chat-bar-input-wrap">
+    <input id="chat-bar-input" type="text" placeholder="Say something&hellip;" maxlength="280"
+      onkeydown="if(event.key==='Enter')sendMessage()" autocomplete="off">
+    <button id="chat-bar-send" onclick="sendMessage()">Send</button>
+  </div>
+</div>
 
 <script>
 const FLAGS = {
@@ -1001,18 +1274,35 @@ async function hashPassword(pw) {
 function openAuthModal(tab) {
   switchAuthTab(tab || 'login');
   document.getElementById('auth-overlay').classList.remove('hidden');
-  setTimeout(() => document.getElementById(tab==='register'?'reg-name':'login-id').focus(), 100);
+  const focusMap = { register:'reg-name', reset:'reset-id', editname:'editname-input' };
+  const focusId = focusMap[tab] || 'login-id';
+  setTimeout(() => document.getElementById(focusId)?.focus(), 100);
 }
 function closeAuthModal() {
   document.getElementById('auth-overlay').classList.add('hidden');
 }
 function switchAuthTab(tab) {
-  document.getElementById('tab-login').classList.toggle('active', tab==='login');
-  document.getElementById('tab-register').classList.toggle('active', tab==='register');
-  document.getElementById('auth-login-form').style.display = tab==='login' ? 'block' : 'none';
-  document.getElementById('auth-register-form').style.display = tab==='register' ? 'block' : 'none';
-  document.getElementById('login-err').textContent = '';
-  document.getElementById('reg-err').textContent = '';
+  ['login','register','reset','editname'].forEach(t => {
+    const btn = document.getElementById(`tab-${t}`);
+    const form = document.getElementById(`auth-${t}-form`);
+    if (btn) btn.classList.toggle('active', t===tab);
+    if (form) form.style.display = t===tab ? 'block' : 'none';
+  });
+  // Only show reset/editname tabs when on those views (keep UI clean)
+  document.getElementById('tab-reset').style.display = tab==='reset' ? 'inline-block' : 'none';
+  document.getElementById('tab-editname').style.display = tab==='editname' ? 'inline-block' : 'none';
+  // Clear errors
+  ['login-err','reg-err','reset-err1','reset-err2','editname-err','editname-ok'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '';
+  });
+  if (tab === 'editname' && currentUser) {
+    document.getElementById('editname-input').value = document.getElementById('active-user').textContent;
+  }
+  if (tab === 'reset') {
+    document.getElementById('reset-step1').style.display = 'block';
+    document.getElementById('reset-step2').style.display = 'none';
+    document.getElementById('reset-id').value = '';
+  }
 }
 
 async function doRegister() {
@@ -1057,6 +1347,7 @@ async function loginAs(id, name) {
   document.getElementById('active-user').textContent = `${name}`;
   document.getElementById('btn-login-open').style.display = 'none';
   document.getElementById('btn-logout').style.display = 'inline-block';
+  document.getElementById('btn-editname').style.display = 'inline-block';
   await loadUser(id);
   autoPopulateR32();
   renderGroups();
@@ -1072,9 +1363,78 @@ function logout() {
   document.getElementById('active-user').textContent = '';
   document.getElementById('btn-login-open').style.display = 'inline-block';
   document.getElementById('btn-logout').style.display = 'none';
+  document.getElementById('btn-editname').style.display = 'none';
   renderGroups();
   renderKnockout();
   showToast('Logged out.');
+}
+
+// ── PASSWORD RESET ────────────────────────────────────────────────────────────
+let resetTargetId = null;
+
+async function doRequestReset() {
+  const id  = document.getElementById('reset-id').value.trim().toLowerCase();
+  const err = document.getElementById('reset-err1');
+  err.textContent = '';
+  if (!id) { err.textContent = 'Please enter your email or phone number.'; return; }
+  // Check account exists
+  const { data: account } = await sb.from('accounts').select('id').eq('id', id).maybeSingle();
+  if (!account) { err.textContent = 'No account found with that email/phone.'; return; }
+  // Generate 8-char reset code
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i=0; i<8; i++) code += chars[Math.floor(Math.random()*chars.length)];
+  const expiresAt = new Date(Date.now() + 24*60*60*1000).toISOString(); // 24h expiry
+  await sb.from('reset_codes').upsert({ user_id: id, code, expires_at: expiresAt }, { onConflict: 'user_id' });
+  resetTargetId = id;
+  document.getElementById('reset-step1').style.display = 'none';
+  document.getElementById('reset-step2').style.display = 'block';
+}
+
+async function doConfirmReset() {
+  const code   = document.getElementById('reset-code').value.trim().toUpperCase();
+  const pw     = document.getElementById('reset-newpw').value;
+  const pw2    = document.getElementById('reset-newpw2').value;
+  const err    = document.getElementById('reset-err2');
+  err.textContent = '';
+  if (!code) { err.textContent = 'Please enter the reset code.'; return; }
+  if (pw.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+  if (pw !== pw2)    { err.textContent = 'Passwords do not match.'; return; }
+  // Verify code
+  const { data: row } = await sb.from('reset_codes').select('code, expires_at')
+    .eq('user_id', resetTargetId).maybeSingle();
+  if (!row) { err.textContent = 'Reset code not found. Please request a new one.'; return; }
+  if (row.code !== code) { err.textContent = 'Incorrect code. Please check and try again.'; return; }
+  if (new Date(row.expires_at) < new Date()) { err.textContent = 'Code has expired. Please request a new one.'; return; }
+  // Update password
+  const hash = await hashPassword(pw);
+  await sb.from('accounts').update({ hash }).eq('id', resetTargetId);
+  await sb.from('reset_codes').delete().eq('user_id', resetTargetId);
+  resetTargetId = null;
+  closeAuthModal();
+  showToast('Password reset successfully! Please log in.');
+  switchAuthTab('login');
+  openAuthModal('login');
+}
+
+// ── EDIT DISPLAY NAME ─────────────────────────────────────────────────────────
+async function doEditName() {
+  const newName = document.getElementById('editname-input').value.trim();
+  const err = document.getElementById('editname-err');
+  const ok  = document.getElementById('editname-ok');
+  err.textContent = ''; ok.textContent = '';
+  if (!newName) { err.textContent = 'Please enter a name.'; return; }
+  if (!currentUser) { err.textContent = 'You must be logged in.'; return; }
+  const { error } = await sb.from('accounts').update({ name: newName }).eq('id', currentUser);
+  if (error) { err.textContent = 'Error saving name.'; return; }
+  document.getElementById('active-user').textContent = newName;
+  try {
+    const sess = JSON.parse(sessionStorage.getItem('wc26_session') || '{}');
+    sess.name = newName;
+    sessionStorage.setItem('wc26_session', JSON.stringify(sess));
+  } catch(e) {}
+  ok.textContent = 'Name updated!';
+  setTimeout(() => closeAuthModal(), 1200);
 }
 
 function showPage(name, skipEvent) {
@@ -1206,6 +1566,17 @@ function updatePrediction(matchId, side, value) {
   if (!predictions[matchId]) predictions[matchId] = { home: '', away: '' };
   predictions[matchId][side] = value === '' ? '' : parseInt(value) || 0;
   // Rebuild R32 from group standings whenever scores change
+  // Check for GIF-worthy winner before saving
+  const _p = predictions[matchId];
+  if (_p && _p.home !== '' && _p.away !== '') {
+    const _matchInfo = allGroupMatches.find(m => m.id === matchId);
+    if (_matchInfo) {
+      const _winner = getWinnerFromScores(_matchInfo.home, _matchInfo.away, _p.home, _p.away);
+      if (_winner && TEAM_GIFS[_winner]) {
+        showGifPopup(_winner, null);
+      }
+    }
+  }
   autoPopulateR32();
   saveData();
   const card = document.querySelector(`[data-match="${matchId}"]`)?.closest('.group-card');
@@ -1344,9 +1715,11 @@ function autoPopulateR32() {
       homeConfirmed: homeRes.confirmed,
       awayConfirmed: awayRes.confirmed,
       matchConfirmed: confirmed,
-      home: teamsChanged ? undefined : existing.home,
-      away: teamsChanged ? undefined : existing.away,
-      winner: teamsChanged ? undefined : existing.winner,
+      home:    teamsChanged ? undefined : existing.home,
+      away:    teamsChanged ? undefined : existing.away,
+      penHome: teamsChanged ? undefined : existing.penHome,
+      penAway: teamsChanged ? undefined : existing.penAway,
+      winner:  teamsChanged ? undefined : existing.winner,
     };
     if (!teamsChanged && existing.winner) {
       advanceWinner(id, existing.winner);
@@ -1419,14 +1792,17 @@ function renderKnockout() {
       const homeClass = winner===homeTeam&&winner!=='TBD' ? 'winner' : (!homeConfirmed ? 'tentative' : '');
       const awayClass = winner===awayTeam&&winner!=='TBD' ? 'winner' : (!awayConfirmed ? 'tentative' : '');
 
+      const isTiePred = state.home !== undefined && state.away !== undefined && state.home === state.away;
+      const penLabel = isTiePred && state.penHome !== undefined
+        ? ` <span style="font-size:9px;color:var(--muted)">(${state.penHome}-${state.penAway}p)</span>` : '';
       matchEl.innerHTML = `
         <div class="bracket-team ${homeClass}">
           <span>${homeTeam}</span>
-          <span class="bracket-score">${homeConfirmed ? homeScore : ''}</span>
+          <span class="bracket-score">${homeConfirmed ? homeScore : ''}${winner===homeTeam ? penLabel : ''}</span>
         </div>
         <div class="bracket-team ${awayClass}">
           <span>${awayTeam}</span>
-          <span class="bracket-score">${awayConfirmed ? awayScore : ''}</span>
+          <span class="bracket-score">${awayConfirmed ? awayScore : ''}${winner===awayTeam ? penLabel : ''}</span>
         </div>
       `;
       matchesDiv.appendChild(matchEl);
@@ -1452,10 +1828,48 @@ function openKnockoutModal(matchId, home, away, confirmed) {
   document.getElementById('modal-team1').textContent = home;
   document.getElementById('modal-flag2').textContent = '';
   document.getElementById('modal-team2').textContent = away;
+  document.getElementById('modal-pen-team1').textContent = home;
+  document.getElementById('modal-pen-team2').textContent = away;
   const existing = knockoutState[matchId] || {};
-  document.getElementById('modal-score1').value = existing.home !== undefined ? existing.home : 0;
-  document.getElementById('modal-score2').value = existing.away !== undefined ? existing.away : 0;
+  const s1 = existing.home !== undefined ? existing.home : 0;
+  const s2 = existing.away !== undefined ? existing.away : 0;
+  document.getElementById('modal-score1').value = s1;
+  document.getElementById('modal-score2').value = s2;
+  // If previously saved as a draw, restore penalty scores
+  const isTie = s1 === s2;
+  document.getElementById('modal-pen-section').style.display = isTie ? 'block' : 'none';
+  document.getElementById('modal-pen1').value = existing.penHome !== undefined ? existing.penHome : 5;
+  document.getElementById('modal-pen2').value = existing.penAway !== undefined ? existing.penAway : 4;
+  updatePenWinnerLabel();
   document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function onModalScoreChange() {
+  const s1 = parseInt(document.getElementById('modal-score1').value) || 0;
+  const s2 = parseInt(document.getElementById('modal-score2').value) || 0;
+  const isTie = s1 === s2;
+  document.getElementById('modal-pen-section').style.display = isTie ? 'block' : 'none';
+  if (isTie) updatePenWinnerLabel();
+}
+
+function onPenScoreChange() {
+  updatePenWinnerLabel();
+}
+
+function updatePenWinnerLabel() {
+  const p1 = parseInt(document.getElementById('modal-pen1').value) || 0;
+  const p2 = parseInt(document.getElementById('modal-pen2').value) || 0;
+  const team1 = document.getElementById('modal-pen-team1').textContent;
+  const team2 = document.getElementById('modal-pen-team2').textContent;
+  const el = document.getElementById('modal-pen-winner');
+  if (p1 === p2) {
+    el.textContent = 'Shootout scores must differ';
+    el.style.color = '#e74c3c';
+  } else {
+    const winner = p1 > p2 ? team1 : team2;
+    el.textContent = winner + ' win on penalties';
+    el.style.color = 'var(--gold)';
+  }
 }
 
 function closeModal() {
@@ -1468,21 +1882,37 @@ function saveModalPrediction() {
   const s1 = parseInt(document.getElementById('modal-score1').value) || 0;
   const s2 = parseInt(document.getElementById('modal-score2').value) || 0;
   const { matchId, home, away } = modalContext;
-  const winner = s1 > s2 ? home : s2 > s1 ? away : null;
+  const isTie = s1 === s2;
+  let winner, penHome, penAway;
+  if (isTie) {
+    penHome = parseInt(document.getElementById('modal-pen1').value) || 0;
+    penAway = parseInt(document.getElementById('modal-pen2').value) || 0;
+    if (penHome === penAway) {
+      showToast('Penalty scores must differ — one team must win the shootout.');
+      return;
+    }
+    winner = penHome > penAway ? home : away;
+  } else {
+    winner = s1 > s2 ? home : away;
+  }
   const existing = knockoutState[matchId] || {};
   knockoutState[matchId] = {
     ...existing,
     homeTeam: home, awayTeam: away,
     home: s1, away: s2,
-    winner: winner || home  // in knockouts, no draws — home wins tiebreak for prediction
+    ...(isTie ? { penHome, penAway } : { penHome: undefined, penAway: undefined }),
+    winner
   };
-  // Also store in predictions{} so calculatePoints can score it
-  predictions[matchId] = { home: s1, away: s2 };
-  advanceWinner(matchId, knockoutState[matchId].winner);
+  predictions[matchId] = { home: s1, away: s2, ...(isTie ? { penHome, penAway } : {}) };
+  advanceWinner(matchId, winner);
   saveData();
   closeModal();
   renderKnockout();
-  showToast('Prediction saved!');
+  if (TEAM_GIFS[winner]) {
+    showGifPopup(winner, null);
+  } else {
+    showToast('Prediction saved!');
+  }
 }
 
 function advanceWinner(matchId, winner) {
@@ -1496,12 +1926,39 @@ function advanceWinner(matchId, winner) {
   const nextIdx = Math.floor(idx/2);
   const nextId = `${nextRound}_${nextIdx}`;
   if (!knockoutState[nextId]) knockoutState[nextId] = {};
-  if (idx % 2 === 0) knockoutState[nextId].homeTeam = winner;
-  else knockoutState[nextId].awayTeam = winner;
-  // Clear scores if teams changed
-  knockoutState[nextId].home = undefined;
-  knockoutState[nextId].away = undefined;
-  knockoutState[nextId].winner = undefined;
+  const slot = idx % 2 === 0 ? 'homeTeam' : 'awayTeam';
+  const prevTeam = knockoutState[nextId][slot];
+  knockoutState[nextId][slot] = winner;
+  // Only clear the next match's prediction if the team actually changed
+  if (prevTeam !== winner) {
+    knockoutState[nextId].home      = undefined;
+    knockoutState[nextId].away      = undefined;
+    knockoutState[nextId].penHome   = undefined;
+    knockoutState[nextId].penAway   = undefined;
+    knockoutState[nextId].winner    = undefined;
+    delete predictions[nextId];
+    // Cascade clear further downstream too
+    advanceClear(nextId);
+  }
+}
+
+function advanceClear(matchId) {
+  // Recursively clear downstream matches when a team changes
+  const parts = matchId.split('_');
+  const round = parts[0];
+  const idx = parseInt(parts[1]);
+  const nextMap = { R32:'R16', R16:'QF', QF:'SF', SF:'F' };
+  const nextRound = nextMap[round];
+  if (!nextRound) return;
+  const nextId = `${nextRound}_${Math.floor(idx/2)}`;
+  if (!knockoutState[nextId]) return;
+  knockoutState[nextId].home    = undefined;
+  knockoutState[nextId].away    = undefined;
+  knockoutState[nextId].penHome = undefined;
+  knockoutState[nextId].penAway = undefined;
+  knockoutState[nextId].winner  = undefined;
+  delete predictions[nextId];
+  advanceClear(nextId);
 }
 
 // LEADERBOARD
@@ -1529,7 +1986,7 @@ async function renderLeaderboard() {
     <div class="lb-card">
       <div class="lb-header">
         <h2>Rankings</h2>
-        <div class="lb-subtext">${scored.length} participant${scored.length!==1?'s':''} — Group: result=10, exact=10, 1 score=5 &nbsp;|&nbsp; KO: R16=30, QF=40, SF/F=100 (+10 exact, +5 one score)</div>
+        <div class="lb-subtext">${scored.length} participant${scored.length!==1?'s':''}</div>
       </div>
       <table class="leaderboard-table">
         <thead>
@@ -1546,12 +2003,15 @@ async function renderLeaderboard() {
     const rank = i+1;
     const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
     const isYou = u.id === currentUser;
-    const predCount = Object.values(u.predictions).filter(p => p && p.home!=='' && p.away!=='').length;
+    const groupCount = Object.entries(u.predictions).filter(([id,p]) => id.startsWith('G') && p && p.home!=='' && p.away!=='').length;
+    const koCount    = Object.entries(u.predictions).filter(([id,p]) => !id.startsWith('G') && p && p.home!=='' && p.away!=='').length;
+    const koTotal    = 31; // 16+8+4+2+1
+    const medal = rank===1 ? '&#129351;' : rank===2 ? '&#129352;' : '';
     html += `<tr class="${isYou?'you-row':''}">
       <td><span class="rank ${rankClass}">${rank}</span></td>
-      <td>${u.name}${isYou?'<span class="you-badge">you</span>':''}</td>
+      <td>${medal ? `<span style="font-size:18px;margin-right:4px">${medal}</span>` : ''}${u.name}${isYou?'<span class="you-badge">you</span>':''}</td>
       <td class="points-cell">${u.pts}</td>
-      <td style="color:var(--muted);font-size:12px">${predCount}/${total}</td>
+      <td style="color:var(--muted);font-size:12px">${groupCount}/${total} grp &nbsp; ${koCount}/${koTotal} ko</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
@@ -1567,6 +2027,29 @@ async function loadActualResults() {
     if (data) ACTUAL_RESULTS = data.actual_results || {};
   } catch(e) { console.error('loadActualResults error', e); }
 }
+
+// Poll for new results every 60s and trigger fireworks for newly correct predictions
+let _knownResults = {};
+async function pollActualResults() {
+  const prevKeys = new Set(Object.keys(_knownResults));
+  await loadActualResults();
+  const newEntries = Object.entries(ACTUAL_RESULTS).filter(([id]) => !prevKeys.has(id));
+  _knownResults = { ...ACTUAL_RESULTS };
+  if (newEntries.length && currentUser) {
+    // Check each new result against user's predictions — fire for first match found
+    for (const [id, result] of newEntries) {
+      const p = predictions[id];
+      if (!p || p.home==='' || p.away==='') continue;
+      const ph=parseInt(p.home), pa=parseInt(p.away), ah=result.home, aa=result.away;
+      const isKO = !id.startsWith('G');
+      const exact = ph===ah && pa===aa;
+      const pW = isKO?(ph>=pa?'h':'a'):(ph>pa?'H':ph<pa?'A':'D');
+      const aW = isKO?(ah>aa?'h':'a'):(ah>aa?'H':ah<aa?'A':'D');
+      if (exact || pW===aW) { checkAndFireworks(id, result); break; }
+    }
+  }
+}
+setInterval(pollActualResults, 60000);
 
 async function saveActualResults() {
   try {
@@ -1676,18 +2159,29 @@ function renderAdminKnockoutResults() {
       const h = r !== undefined ? r.home : '';
       const a = r !== undefined ? r.away : '';
       const saved = r !== undefined;
-      html += `<div class="admin-match-row">
+      const isPen = saved && r.home === r.away;
+      html += `<div class="admin-match-row" style="flex-wrap:wrap">
         <span class="flag">${FLAGS[home]||'❓'}</span>
         <span class="admin-team" style="font-size:12px">${home}</span>
         <input type="number" min="0" max="30" class="admin-score-input ${saved?'has-result':''}"
-          id="ar_${id}_h" value="${h}" placeholder="—" onchange="markUnsaved('${id}')">
+          id="ar_${id}_h" value="${h}" placeholder="—" onchange="onAdminKOScoreChange('${id}');markUnsaved('${id}')">
         <span style="color:var(--muted);font-weight:700">–</span>
         <input type="number" min="0" max="30" class="admin-score-input ${saved?'has-result':''}"
-          id="ar_${id}_a" value="${a}" placeholder="—" onchange="markUnsaved('${id}')">
+          id="ar_${id}_a" value="${a}" placeholder="—" onchange="onAdminKOScoreChange('${id}');markUnsaved('${id}')">
         <span class="admin-team right" style="font-size:12px">${away}</span>
         <span class="flag">${FLAGS[away]||'❓'}</span>
         <span id="badge_${id}" class="result-badge ${saved?'saved':'unsaved'}">${saved?'saved':'—'}</span>
         <button class="admin-save-btn" onclick="saveResult('${id}')">Save</button>
+        <div id="pen_row_${id}" style="display:${isPen?'flex':'none'};width:100%;align-items:center;gap:6px;padding:4px 0 0 0;font-size:11px;color:var(--gold)">
+          <span>Penalties:</span>
+          <span style="font-size:11px;color:var(--muted)">${home}</span>
+          <input type="number" min="0" max="30" id="ar_${id}_ph" value="${isPen?r.penHome:''}" placeholder="—"
+            style="width:36px;height:28px;background:var(--surface2);border:1px solid rgba(201,168,76,.4);border-radius:4px;color:var(--gold);text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700">
+          <span style="color:var(--muted)">–</span>
+          <input type="number" min="0" max="30" id="ar_${id}_pa" value="${isPen?r.penAway:''}" placeholder="—"
+            style="width:36px;height:28px;background:var(--surface2);border:1px solid rgba(201,168,76,.4);border-radius:4px;color:var(--gold);text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700">
+          <span style="font-size:11px;color:var(--muted)">${away}</span>
+        </div>
       </div>`;
     }
     html += '</div>';
@@ -1700,6 +2194,13 @@ function markUnsaved(id) {
   if (badge) { badge.textContent = 'edited'; badge.className = 'result-badge unsaved'; }
 }
 
+function onAdminKOScoreChange(id) {
+  const h = parseInt(document.getElementById(`ar_${id}_h`)?.value) || 0;
+  const a = parseInt(document.getElementById(`ar_${id}_a`)?.value) || 0;
+  const penRow = document.getElementById(`pen_row_${id}`);
+  if (penRow) penRow.style.display = h === a ? 'flex' : 'none';
+}
+
 async function saveResult(matchId) {
   const hEl = document.getElementById(`ar_${matchId}_h`);
   const aEl = document.getElementById(`ar_${matchId}_a`);
@@ -1709,27 +2210,40 @@ async function saveResult(matchId) {
   if (hv === '' || av === '') { showToast('Please enter both scores before saving.'); return; }
   const h = parseInt(hv);
   const a = parseInt(av);
-  ACTUAL_RESULTS[matchId] = { home: h, away: a };
+  const isKO = !matchId.startsWith('G');
+  const isTie = isKO && h === a;
+  let result = { home: h, away: a };
+  if (isTie) {
+    const ph = parseInt(document.getElementById(`ar_${matchId}_ph`)?.value || 0);
+    const pa = parseInt(document.getElementById(`ar_${matchId}_pa`)?.value || 0);
+    if (ph === pa) { showToast('Penalty scores must differ.'); return; }
+    const state = knockoutState[matchId] || {};
+    result.penHome   = ph;
+    result.penAway   = pa;
+    result.homeTeam  = state.homeTeam || 'Home';
+    result.awayTeam  = state.awayTeam || 'Away';
+  }
+  ACTUAL_RESULTS[matchId] = result;
   await saveActualResults();
   const badge = document.getElementById(`badge_${matchId}`);
   if (badge) { badge.textContent = 'saved'; badge.className = 'result-badge saved'; }
   hEl.classList.add('has-result');
   aEl.classList.add('has-result');
   renderResultsSummary();
-  showToast(`Result saved: ${h} – ${a}`);
+  showToast(`Result saved: ${h} – ${a}${isTie ? ` (${result.penHome}-${result.penAway}p)` : ''}`);
+  // Trigger fireworks if current user predicted this correctly
+  checkAndFireworks(matchId, result);
 }
 
 
 
 // Points for correct result by round
 const RESULT_POINTS = {
-  // Group stage
-  'G': 10,
-  // Knockout rounds (R32=round of 32/16, R16=round of 16/8, QF=quarter/4, SF=semi/2, F=final/2)
-  'R32': 30,   // Round of 16 (32 teams → 16)
-  'R16': 40,   // Round of 8
-  'QF':  50,   // Round of 4
-  'SF':  100,  // Round of 2
+  'G':   10,   // Group stage
+  'R32': 20,   // Round of 32
+  'R16': 30,   // Round of 16
+  'QF':  40,   // Quarter-final
+  'SF':  50,   // Semi-final
   'F':   100,  // Final
 };
 
@@ -1750,14 +2264,30 @@ function calculatePoints(preds, koState) {
     const isKnockout = !id.startsWith('G');
     const resultPts = isKnockout ? getResultPoints(id) : 10;
 
-    // In knockout rounds the "result" is who advances (winner), not score direction
-    // For knockout: predicted winner = higher score team (or home if draw)
-    const pWinner = isKnockout
-      ? (ph >= pa ? (ko[id]?.homeTeam || 'home') : (ko[id]?.awayTeam || 'away'))
-      : (ph > pa ? 'H' : ph < pa ? 'A' : 'D');
-    const aWinner = isKnockout
-      ? (ah > aa ? actual.homeTeam : actual.awayTeam)
-      : (ah > aa ? 'H' : ah < aa ? 'A' : 'D');
+    // In knockout rounds the "result" is who advances (winner)
+    // For ties, penalty scores determine the winner
+    let pWinner, aWinner;
+    if (isKnockout) {
+      if (ph === pa) {
+        // Predicted draw — use penalty scores to determine predicted winner
+        const pp1 = p.penHome !== undefined ? parseInt(p.penHome) : -1;
+        const pp2 = p.penAway !== undefined ? parseInt(p.penAway) : -1;
+        pWinner = pp1 > pp2 ? (ko[id]?.homeTeam || 'home') : (ko[id]?.awayTeam || 'away');
+      } else {
+        pWinner = ph > pa ? (ko[id]?.homeTeam || 'home') : (ko[id]?.awayTeam || 'away');
+      }
+      if (ah === aa) {
+        // Actual draw — use penalty scores from actual result
+        const ap1 = actual.penHome !== undefined ? parseInt(actual.penHome) : -1;
+        const ap2 = actual.penAway !== undefined ? parseInt(actual.penAway) : -1;
+        aWinner = ap1 > ap2 ? actual.homeTeam : actual.awayTeam;
+      } else {
+        aWinner = ah > aa ? actual.homeTeam : actual.awayTeam;
+      }
+    } else {
+      pWinner = ph > pa ? 'H' : ph < pa ? 'A' : 'D';
+      aWinner = ah > aa ? 'H' : ah < aa ? 'A' : 'D';
+    }
 
     const correctResult = isKnockout
       ? (pWinner === aWinner)
@@ -1807,6 +2337,9 @@ async function renderAdminUsers() {
   const container = document.getElementById('admin-users-content');
   container.innerHTML = '<div style="color:var(--muted);padding:1rem">Loading users...</div>';
   const { data: accounts, error } = await sb.from('accounts').select('id, name').order('name');
+  const { data: codes } = await sb.from('reset_codes').select('user_id, code, expires_at');
+  const codeMap = {};
+  (codes || []).forEach(r => codeMap[r.user_id] = r);
   if (error || !accounts?.length) {
     container.innerHTML = '<div style="color:var(--muted);padding:1rem">No registered users yet.</div>';
     return;
@@ -1814,14 +2347,19 @@ async function renderAdminUsers() {
   let html = '<div class="admin-group-section"><div class="admin-group-title">Registered Users (' + accounts.length + ')</div>';
   for (const account of accounts) {
     const key = btoa(account.id).replace(/[^a-zA-Z0-9]/g,'');
+    const pending = codeMap[account.id];
+    const resetInfo = pending
+      ? `<span class="temp-pw-display" style="display:inline-block" title="Expires ${new Date(pending.expires_at).toLocaleString()}">Code: ${pending.code}</span>`
+      : '';
     html += `<div class="user-row" id="urow_${key}">
       <span class="user-name">${account.name}</span>
       <span class="user-id">${account.id}</span>
+      ${resetInfo}
       <span id="upw_${key}" class="temp-pw-display" style="display:none"></span>
       <button class="reset-btn" onclick="adminResetPassword('${account.id}')">Reset password</button>
     </div>`;
   }
-  html += '</div>';
+  html += '</div><p style="font-size:11px;color:var(--muted);padding:8px 12px">Reset codes are valid for 24 hours. Share the code with the user so they can reset their own password.</p>';
   container.innerHTML = html;
 }
 
@@ -1865,6 +2403,360 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 document.getElementById('auth-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeAuthModal();
 });
+
+// ── GIF POPUPS ────────────────────────────────────────────────────────────────
+const TEAM_GIFS = {
+  'Iran': 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHUzcW81d2lhMHRkNTF5bzhwbmdlZnFwOHc1cGF4MnEzYjdkbjU3dCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ToMjGpjpXMFPshSYGLm/giphy.gif',
+  'USA':  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWw0bjJ0ZHJnN3lrM2RlZ214MzA4bTYxd2sydGljNmgzOHdzeHljYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/YfMHLC2s6okBq/giphy.gif',
+};
+const GIF_LABELS = {
+  'Iran': 'Iran to win? Are you sure about that? 🤔',
+  'USA':  "USA! USA! USA! 🦅🇺🇸",
+};
+
+let gifDismissCallback = null;
+
+function showGifPopup(team, onDismiss) {
+  const url = TEAM_GIFS[team];
+  if (!url) return;
+  document.getElementById('gif-popup-img').src = url;
+  document.getElementById('gif-popup-label').textContent = GIF_LABELS[team] || '';
+  document.getElementById('gif-popup-overlay').classList.add('visible');
+  gifDismissCallback = onDismiss || null;
+}
+
+function dismissGifPopup() {
+  document.getElementById('gif-popup-overlay').classList.remove('visible');
+  // Clear src after transition so gif resets next time
+  setTimeout(() => { document.getElementById('gif-popup-img').src = ''; }, 300);
+  if (gifDismissCallback) { gifDismissCallback(); gifDismissCallback = null; }
+}
+
+function getWinnerFromScores(homeTeam, awayTeam, homeScore, awayScore) {
+  const h = parseInt(homeScore), a = parseInt(awayScore);
+  if (isNaN(h) || isNaN(a) || h === a) return null;
+  return h > a ? homeTeam : awayTeam;
+}
+
+function checkAndShowGif(winner, onAfter) {
+  if (TEAM_GIFS[winner]) {
+    showGifPopup(winner, onAfter);
+    return true;
+  }
+  if (onAfter) onAfter();
+  return false;
+}
+
+// ── FIREWORKS ENGINE ─────────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('fireworks-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], rockets = [], animId = null, activeUntil = 0;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const COLORS = [
+    '#C9A84C','#FFD700','#FF6B35','#4CAF50','#2196F3',
+    '#E91E63','#9C27B0','#00BCD4','#FFEB3B','#FF5722'
+  ];
+
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  class Particle {
+    constructor(x, y, color, vx, vy, size, gravity, life) {
+      this.x = x; this.y = y; this.color = color;
+      this.vx = vx; this.vy = vy; this.size = size;
+      this.gravity = gravity ?? 0.06;
+      this.life = life ?? 1;
+      this.decay = randBetween(0.012, 0.022);
+      this.trail = [];
+    }
+    update() {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 6) this.trail.shift();
+      this.vx *= 0.97;
+      this.vy += this.gravity;
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life -= this.decay;
+    }
+    draw() {
+      // Trail
+      for (let i = 0; i < this.trail.length; i++) {
+        const alpha = (i / this.trail.length) * this.life * 0.4;
+        ctx.beginPath();
+        ctx.arc(this.trail[i].x, this.trail[i].y, this.size * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2,'0');
+        ctx.fill();
+      }
+      // Main particle
+      ctx.globalAlpha = Math.max(0, this.life);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  class Rocket {
+    constructor() {
+      this.x = randBetween(W * 0.1, W * 0.9);
+      this.y = H + 10;
+      this.targetY = randBetween(H * 0.1, H * 0.45);
+      this.vy = -randBetween(14, 20);
+      this.color = pick(COLORS);
+      this.trail = [];
+      this.exploded = false;
+    }
+    update() {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 10) this.trail.shift();
+      this.vy += 0.3; // slow down as it rises
+      this.y += this.vy;
+      if (this.y <= this.targetY || this.vy >= 0) {
+        this.exploded = true;
+        explode(this.x, this.y, this.color);
+      }
+    }
+    draw() {
+      for (let i = 0; i < this.trail.length; i++) {
+        const alpha = (i / this.trail.length) * 0.8;
+        ctx.beginPath();
+        ctx.arc(this.trail[i].x, this.trail[i].y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2,'0');
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+  }
+
+  function explode(x, y, color) {
+    const count = Math.floor(randBetween(80, 130));
+    const style = Math.random();
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      let speed;
+      if (style < 0.33) {
+        // Ring burst
+        speed = randBetween(3.5, 6);
+      } else if (style < 0.66) {
+        // Random spray
+        speed = randBetween(1, 8);
+      } else {
+        // Star burst (uneven petals)
+        speed = (i % 7 === 0) ? randBetween(6, 10) : randBetween(1.5, 4);
+      }
+      const vx = Math.cos(angle) * speed + randBetween(-0.5, 0.5);
+      const vy = Math.sin(angle) * speed + randBetween(-0.5, 0.5);
+      const pColor = Math.random() < 0.3 ? pick(COLORS) : color;
+      const size = randBetween(1.5, 3.5);
+      particles.push(new Particle(x, y, pColor, vx, vy, size));
+    }
+    // Gold sparkles
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = randBetween(0.5, 12);
+      particles.push(new Particle(x, y, '#FFD700',
+        Math.cos(angle) * speed, Math.sin(angle) * speed,
+        randBetween(0.8, 2), 0.12, randBetween(0.6, 1)
+      ));
+    }
+  }
+
+  function launchBurst(count) {
+    // Stagger rocket launches
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => rockets.push(new Rocket()), i * randBetween(100, 350));
+    }
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    rockets = rockets.filter(r => { r.update(); if (!r.exploded) r.draw(); return !r.exploded; });
+    particles = particles.filter(p => { p.update(); p.draw(); return p.life > 0; });
+    if (Date.now() < activeUntil) {
+      // Keep launching new rockets while show is active
+      if (Math.random() < 0.04) rockets.push(new Rocket());
+      animId = requestAnimationFrame(loop);
+    } else if (particles.length > 0 || rockets.length > 0) {
+      animId = requestAnimationFrame(loop);
+    } else {
+      animId = null;
+    }
+  }
+
+  // Public API
+  window.launchFireworks = function(duration = 4000, intensity = 'normal') {
+    activeUntil = Date.now() + duration;
+    const burstCount = intensity === 'big' ? 8 : intensity === 'huge' ? 16 : 5;
+    launchBurst(burstCount);
+    if (!animId) loop();
+  };
+})();
+
+// Check if admin saving a result gives current user a correct prediction
+function checkAndFireworks(matchId, actualResult) {
+  if (!currentUser || !predictions[matchId]) return;
+  const p = predictions[matchId];
+  if (!p || p.home === '' || p.away === '') return;
+  const ph = parseInt(p.home), pa = parseInt(p.away);
+  const ah = actualResult.home, aa = actualResult.away;
+  const isKnockout = !matchId.startsWith('G');
+
+  // Determine if prediction was correct result
+  let correctResult = false;
+  let exactScore = false;
+  if (ph === ah && pa === aa) { exactScore = true; correctResult = true; }
+  else {
+    const pWin = !isKnockout ? (ph>pa?'H':ph<pa?'A':'D') : (ph>=pa ? 'home' : 'away');
+    const aWin = !isKnockout ? (ah>aa?'H':ah<aa?'A':'D') : (ah>aa ? 'home' : 'away');
+    if (pWin === aWin) correctResult = true;
+  }
+
+  if (exactScore) {
+    // Exact score — big fireworks
+    const intensity = matchId.startsWith('F_') ? 'huge' : matchId.startsWith('SF_') ? 'big' : 'normal';
+    window.launchFireworks(5000, intensity);
+    showToast('🏆 Exact score! Points scored!');
+  } else if (correctResult) {
+    window.launchFireworks(3000, 'normal');
+    showToast('⚽ Correct result! Points scored!');
+  }
+}
+
+// ── MESSAGE BOARD ─────────────────────────────────────────────────────────────
+let chatOpen = false;
+let chatMessages = [];
+let lastSeenMsgId = null;
+let chatPollInterval = null;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-panel').classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    markAllSeen();
+    scrollChatToBottom();
+    document.getElementById('chat-bar-input').focus();
+  }
+}
+
+function scrollChatToBottom() {
+  const el = document.getElementById('chat-messages');
+  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+}
+
+function markAllSeen() {
+  const badge = document.getElementById('chat-unread-badge');
+  badge.style.display = 'none';
+  badge.textContent = '0';
+  if (chatMessages.length) lastSeenMsgId = chatMessages[chatMessages.length - 1].id;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function timeAgo(ts) {
+  const secs = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return Math.floor(secs/60) + 'm ago';
+  if (secs < 86400) return Math.floor(secs/3600) + 'h ago';
+  return new Date(ts).toLocaleDateString([], { month:'short', day:'numeric' });
+}
+
+function renderMessages() {
+  const container = document.getElementById('chat-messages');
+  if (!chatMessages.length) {
+    container.innerHTML = '<div class="chat-empty">No messages yet. Say hi! &#128075;</div>';
+    return;
+  }
+  const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+  container.innerHTML = chatMessages.map(msg => {
+    const mine = msg.user_id === currentUser;
+    const initials = getInitials(msg.display_name);
+    return `<div class="chat-msg${mine ? ' mine' : ''}">
+      <div class="chat-avatar" title="${msg.display_name}">${initials}</div>
+      <div>
+        <div class="chat-meta"><strong>${msg.display_name}</strong> &nbsp;${timeAgo(msg.created_at)}</div>
+        <div class="chat-bubble"><span class="chat-text">${escapeHtml(msg.message)}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  if (wasAtBottom || chatMessages.length <= 3) scrollChatToBottom();
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+async function fetchMessages() {
+  try {
+    const { data } = await sb.from('messages')
+      .select('id, user_id, display_name, message, created_at')
+      .order('created_at', { ascending: true })
+      .limit(200);
+    if (!data) return;
+    const prevCount = chatMessages.length;
+    chatMessages = data;
+    // Update count badge
+    document.getElementById('chat-msg-count').textContent = data.length;
+    // Unread badge for new messages while panel is closed
+    if (!chatOpen && data.length > prevCount && prevCount > 0) {
+      const newCount = data.length - prevCount;
+      const badge = document.getElementById('chat-unread-badge');
+      badge.style.display = 'block';
+      badge.textContent = parseInt(badge.textContent || 0) + newCount;
+    }
+    if (chatOpen) {
+      renderMessages();
+      markAllSeen();
+    }
+  } catch(e) { console.error('fetchMessages error', e); }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-bar-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!currentUser) { showToast('Please log in to send messages.'); openAuthModal('login'); return; }
+  // Get display name
+  const displayName = document.getElementById('active-user').textContent || 'Anonymous';
+  input.value = '';
+  try {
+    await sb.from('messages').insert({
+      user_id: currentUser,
+      display_name: displayName,
+      message: text
+    });
+    await fetchMessages();
+    if (!chatOpen) toggleChat();
+    else scrollChatToBottom();
+  } catch(e) {
+    showToast('Error sending message.');
+    input.value = text;
+    console.error('sendMessage error', e);
+  }
+}
+
+// Poll for new messages every 10 seconds
+async function startChatPolling() {
+  await fetchMessages();
+  chatPollInterval = setInterval(fetchMessages, 10000);
+}
+
+startChatPolling();
 </script>
 </body>
 </html>
