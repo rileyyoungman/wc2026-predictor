@@ -120,6 +120,7 @@
     font-size: 10px;
     color: var(--muted);
     letter-spacing: 0.2px;
+    text-align: center;
   }
   .team-name {
     font-size: 13px; font-weight: 500;
@@ -228,6 +229,11 @@
   .bracket-match.tentative:hover { border-color: var(--border); }
   .seed-label { font-size: 10px; color: var(--muted); opacity: 0.7; margin-right: 2px; }
   .bracket-score { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; }
+  .bracket-meta {
+    font-size: 9px; color: var(--muted); text-align: center;
+    padding: 4px 6px 5px; border-top: 1px solid rgba(255,255,255,.04);
+    line-height: 1.4; letter-spacing: 0.1px;
+  }
 
   /* MODAL */
   .modal-overlay {
@@ -712,7 +718,7 @@
     <div class="legend-item"><span class="legend-icon">&#127942;</span>Exact score (+10 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result (+10 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#129000;</span>One correct team score (+5 pts)</div>
-    <div class="legend-item"><span class="legend-icon">&#127; </span>Wrong (0 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#128577;</span>Wrong (0 pts)</div>
   </div>
   <div id="groups-grid" class="groups-grid"></div>
 </div>
@@ -728,10 +734,10 @@
     <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result R32 (+20 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result R16 (+30 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result QF (+40 pts)</div>
-    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result SF (+50 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct result SF/3rd place (+50 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#127775;</span>Correct result Final (+100 pts)</div>
     <div class="legend-item"><span class="legend-icon">&#129000;</span>One correct team score (+5 pts)</div>
-    <div class="legend-item"><span class="legend-icon">&#127; </span>Wrong (0 pts)</div>
+    <div class="legend-item"><span class="legend-icon">&#128577;</span>Wrong (0 pts)</div>
   </div>
   <div id="bracket-notice" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:1.5rem;font-size:13px;color:var(--muted)">
     <span style="color:var(--gold);font-weight:600">&#9888; Incomplete group predictions</span> — fill in more group stage scores to populate the full bracket.
@@ -803,58 +809,6 @@
     <div id="admin-knockout-content" style="display:none"></div>
   </div>
 </div>
-
-<!-- AUTH MODAL -->
-<div id="auth-overlay" class="auth-overlay hidden">
-  <div class="auth-box-wrap">
-    <div class="auth-box">
-      <button class="auth-close" onclick="closeAuthModal()" aria-label="Close">&times;</button>
-      <h2>WC26 Predictor</h2>
-      <p class="auth-sub">Sign in or create an account to save your bracket</p>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
-        <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
-        <button class="auth-tab" id="tab-reset" onclick="switchAuthTab('reset')" style="display:none">Reset</button>
-        <button class="auth-tab" id="tab-editname" onclick="switchAuthTab('editname')" style="display:none">Edit name</button>
-      </div>
-      <!-- LOGIN FORM -->
-      <div id="auth-login-form">
-        <div class="auth-field">
-          <label>Email or phone number</label>
-          <input id="login-id" type="text" placeholder="you@example.com or 555-1234" autocomplete="username">
-        </div>
-        <div class="auth-field">
-          <label>Password</label>
-          <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password"
-            onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div id="login-err" class="auth-err"></div>
-        <button class="auth-btn" onclick="doLogin()">Log in</button>
-        <p class="auth-hint">No account? <a onclick="switchAuthTab('register')">Register here</a></p>
-      </div>
-      <!-- REGISTER FORM -->
-      <div id="auth-register-form" style="display:none">
-        <div class="auth-field">
-          <label>Display name</label>
-          <input id="reg-name" type="text" placeholder="Your name (shown on leaderboard)" maxlength="30">
-        </div>
-        <div class="auth-field">
-          <label>Email or phone number</label>
-          <input id="reg-id" type="text" placeholder="you@example.com or 555-1234">
-        </div>
-        <div class="auth-field">
-          <label>Password</label>
-          <input id="reg-pw" type="password" placeholder="Choose a password" autocomplete="new-password">
-        </div>
-        <div class="auth-field">
-          <label>Confirm password</label>
-          <input id="reg-pw2" type="password" placeholder="Repeat password" autocomplete="new-password"
-            onkeydown="if(event.key==='Enter')doRegister()">
-        </div>
-        <div id="reg-err" class="auth-err"></div>
-        <button class="auth-btn" onclick="doRegister()">Create account</button>
-        <p class="auth-hint">Already registered? <a onclick="switchAuthTab('login')">Log in</a></p>
-      </div>
 
 <!-- LOCKED BANNERS (shown on group/knockout pages after tournament starts) -->
 <div id="locked-banner-groups" class="locked-banner">
@@ -1178,12 +1132,58 @@ function getGroupSortKey(letter) {
   return matchSortKey(matches[0].home, matches[0].away);
 }
 
+
+// Knockout match schedule info keyed by matchId
+const KO_MATCH_INFO = {
+  // Round of 32 (sorted chronologically = index order)
+  'R32_0':  { date:'Sat Jun 28', time:'3:00 PM ET',  venue:'Los Angeles Stadium' },
+  'R32_1':  { date:'Sun Jun 29', time:'1:00 PM ET',  venue:'Houston Stadium' },
+  'R32_2':  { date:'Sun Jun 29', time:'4:00 PM ET',  venue:'Boston Stadium' },
+  'R32_3':  { date:'Sun Jun 29', time:'9:00 PM ET',  venue:'Estadio Monterrey' },
+  'R32_4':  { date:'Mon Jun 30', time:'1:00 PM ET',  venue:'Dallas Stadium' },
+  'R32_5':  { date:'Mon Jun 30', time:'5:00 PM ET',  venue:'New York New Jersey Stadium' },
+  'R32_6':  { date:'Mon Jun 30', time:'9:00 PM ET',  venue:'Mexico City Stadium' },
+  'R32_7':  { date:'Tue Jul 1',  time:'12:00 PM ET', venue:'Atlanta Stadium' },
+  'R32_8':  { date:'Tue Jul 1',  time:'4:00 PM ET',  venue:'Seattle Stadium' },
+  'R32_9':  { date:'Tue Jul 1',  time:'8:00 PM ET',  venue:'San Francisco Bay Area Stadium' },
+  'R32_10': { date:'Wed Jul 2',  time:'3:00 PM ET',  venue:'Los Angeles Stadium' },
+  'R32_11': { date:'Wed Jul 2',  time:'7:00 PM ET',  venue:'Toronto Stadium' },
+  'R32_12': { date:'Wed Jul 2',  time:'9:00 PM ET',  venue:'BC Place, Vancouver' },
+  'R32_13': { date:'Thu Jul 3',  time:'2:00 PM ET',  venue:'Dallas Stadium' },
+  'R32_14': { date:'Thu Jul 3',  time:'6:00 PM ET',  venue:'Miami Stadium' },
+  'R32_15': { date:'Thu Jul 3',  time:'9:30 PM ET',  venue:'Kansas City Stadium' },
+  // Round of 16
+  'R16_0':  { date:'Fri Jul 4',  time:'1:00 PM ET',  venue:'Houston Stadium' },
+  'R16_1':  { date:'Fri Jul 4',  time:'5:00 PM ET',  venue:'Philadelphia Stadium' },
+  'R16_2':  { date:'Sat Jul 5',  time:'4:00 PM ET',  venue:'New York New Jersey Stadium' },
+  'R16_3':  { date:'Sat Jul 5',  time:'8:00 PM ET',  venue:'Mexico City Stadium' },
+  'R16_4':  { date:'Sun Jul 6',  time:'12:00 PM ET', venue:'Atlanta Stadium' },
+  'R16_5':  { date:'Sun Jul 6',  time:'3:00 PM ET',  venue:'Dallas Stadium' },
+  'R16_6':  { date:'Sun Jul 6',  time:'8:00 PM ET',  venue:'Seattle Stadium' },
+  'R16_7':  { date:'Mon Jul 7',  time:'4:00 PM ET',  venue:'BC Place, Vancouver' },
+  // Quarterfinals
+  'QF_0':   { date:'Thu Jul 9',  time:'4:00 PM ET',  venue:'Boston Stadium' },
+  'QF_1':   { date:'Fri Jul 10', time:'3:00 PM ET',  venue:'Los Angeles Stadium' },
+  'QF_2':   { date:'Sat Jul 11', time:'5:00 PM ET',  venue:'Miami Stadium' },
+  'QF_3':   { date:'Sat Jul 11', time:'9:00 PM ET',  venue:'Kansas City Stadium' },
+  // Semifinals
+  'SF_0':   { date:'Tue Jul 14', time:'3:00 PM ET',  venue:'Dallas Stadium' },
+  'SF_1':   { date:'Wed Jul 15', time:'3:00 PM ET',  venue:'Atlanta Stadium' },
+  // Third place
+  'TP_0':   { date:'Sat Jul 18', time:'5:00 PM ET',  venue:'Miami Stadium' },
+  // Final
+  'F_0':    { date:'Sun Jul 19', time:'3:00 PM ET',  venue:'New York New Jersey Stadium' },
+};
+
 const KNOCKOUT_TEMPLATE = [
   { round: 'R32', matches: Array.from({length:16}, (_,i) => ({ id:`R32_${i}`, home:'TBD', away:'TBD', stage:'knockout' })) },
   { round: 'R16', matches: Array.from({length:8}, (_,i) => ({ id:`R16_${i}`, home:'TBD', away:'TBD', stage:'knockout' })) },
   { round: 'QF',  matches: Array.from({length:4}, (_,i) => ({ id:`QF_${i}`,  home:'TBD', away:'TBD', stage:'knockout' })) },
   { round: 'SF',  matches: Array.from({length:2}, (_,i) => ({ id:`SF_${i}`,  home:'TBD', away:'TBD', stage:'knockout' })) },
-  { round: 'Final', matches: [{ id:'F_0', home:'TBD', away:'TBD', stage:'knockout' }] },
+  { round: 'Finals', matches: [
+    { id:'F_0',  home:'TBD', away:'TBD', stage:'knockout' },
+    { id:'TP_0', home:'TBD', away:'TBD', stage:'knockout' }
+  ]},
   { round: '🏆', matches: [{ id:'CHAMPION', home:'TBD', away:'TBD', stage:'champion' }] }
 ];
 
@@ -1765,12 +1765,17 @@ function renderKnockout() {
       if (round.round === '🏆') {
         const champMatch = document.createElement('div');
         champMatch.style.cssText = 'text-align:center;padding:20px 10px;';
-        const sf = knockoutState['F_0'];
-        const champ = sf?.winner || '?';
+        const finalState = knockoutState['F_0'];
+        const champ = finalState?.winner || '?';
+        const tpState = knockoutState['TP_0'];
+        const third = tpState?.winner || '?';
         champMatch.innerHTML = `
           <div style="font-size:36px;margin-bottom:8px">&#127942;</div>
           <div style="font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700;color:var(--gold)">${champ}</div>
-
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)">
+            <div style="font-size:20px;margin-bottom:4px">&#129352;</div>
+            <div style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:600;color:var(--muted)">${third}</div>
+          </div>
         `;
         matchesDiv.appendChild(champMatch);
         return;
@@ -1788,6 +1793,13 @@ function renderKnockout() {
       matchEl.className = 'bracket-match' + (isTentative ? ' tentative' : '');
       if (isTBD) matchEl.style.opacity = '0.4';
       matchEl.onclick = () => openKnockoutModal(m.id, homeTeam, awayTeam, matchConfirmed);
+      // Add a small label above 3rd place and Final matches
+      if (m.id === 'TP_0' || m.id === 'F_0') {
+        const labelEl = document.createElement('div');
+        labelEl.style.cssText = 'font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:center;padding:4px 0 2px;font-family:Barlow Condensed,sans-serif;';
+        labelEl.textContent = m.id === 'TP_0' ? '3rd Place' : 'Final';
+        matchesDiv.appendChild(labelEl);
+      }
 
       const homeClass = winner===homeTeam&&winner!=='TBD' ? 'winner' : (!homeConfirmed ? 'tentative' : '');
       const awayClass = winner===awayTeam&&winner!=='TBD' ? 'winner' : (!awayConfirmed ? 'tentative' : '');
@@ -1795,6 +1807,8 @@ function renderKnockout() {
       const isTiePred = state.home !== undefined && state.away !== undefined && state.home === state.away;
       const penLabel = isTiePred && state.penHome !== undefined
         ? ` <span style="font-size:9px;color:var(--muted)">(${state.penHome}-${state.penAway}p)</span>` : '';
+      const koInfo = KO_MATCH_INFO[m.id];
+      const koMeta = koInfo ? `<div class="bracket-meta">${koInfo.date} &middot; ${koInfo.time}<br>${koInfo.venue}</div>` : '';
       matchEl.innerHTML = `
         <div class="bracket-team ${homeClass}">
           <span>${homeTeam}</span>
@@ -1804,6 +1818,7 @@ function renderKnockout() {
           <span>${awayTeam}</span>
           <span class="bracket-score">${awayConfirmed ? awayScore : ''}${winner===awayTeam ? penLabel : ''}</span>
         </div>
+        ${koMeta}
       `;
       matchesDiv.appendChild(matchEl);
     });
@@ -1923,6 +1938,23 @@ function advanceWinner(matchId, winner) {
   const nextMap = { R32:'R16', R16:'QF', QF:'SF', SF:'F' };
   const nextRound = nextMap[round];
   if (!nextRound) return;
+  // Also populate 3rd place game with SF losers
+  if (round === 'SF') {
+    const state = knockoutState[matchId] || {};
+    const home = state.homeTeam || 'TBD';
+    const away = state.awayTeam || 'TBD';
+    const loser = winner === home ? away : home;
+    if (!knockoutState['TP_0']) knockoutState['TP_0'] = {};
+    const tpSlot = idx === 0 ? 'homeTeam' : 'awayTeam';
+    const prevLoser = knockoutState['TP_0'][tpSlot];
+    knockoutState['TP_0'][tpSlot] = loser;
+    if (prevLoser !== loser) {
+      knockoutState['TP_0'].home = undefined;
+      knockoutState['TP_0'].away = undefined;
+      knockoutState['TP_0'].winner = undefined;
+      delete predictions['TP_0'];
+    }
+  }
   const nextIdx = Math.floor(idx/2);
   const nextId = `${nextRound}_${nextIdx}`;
   if (!knockoutState[nextId]) knockoutState[nextId] = {};
@@ -1944,6 +1976,8 @@ function advanceWinner(matchId, winner) {
 
 function advanceClear(matchId) {
   // Recursively clear downstream matches when a team changes
+  // TP_0 (3rd place) is terminal — no further advancement
+  if (matchId === 'TP_0') return;
   const parts = matchId.split('_');
   const round = parts[0];
   const idx = parseInt(parts[1]);
@@ -2005,7 +2039,7 @@ async function renderLeaderboard() {
     const isYou = u.id === currentUser;
     const groupCount = Object.entries(u.predictions).filter(([id,p]) => id.startsWith('G') && p && p.home!=='' && p.away!=='').length;
     const koCount    = Object.entries(u.predictions).filter(([id,p]) => !id.startsWith('G') && p && p.home!=='' && p.away!=='').length;
-    const koTotal    = 31; // 16+8+4+2+1
+    const koTotal    = 32; // 16+8+4+2+1+1(3rd place)
     const medal = rank===1 ? '&#129351;' : rank===2 ? '&#129352;' : '';
     html += `<tr class="${isYou?'you-row':''}">
       <td><span class="rank ${rankClass}">${rank}</span></td>
@@ -2244,6 +2278,7 @@ const RESULT_POINTS = {
   'R16': 30,   // Round of 16
   'QF':  40,   // Quarter-final
   'SF':  50,   // Semi-final
+  'TP':  50,   // 3rd place playoff
   'F':   100,  // Final
 };
 
