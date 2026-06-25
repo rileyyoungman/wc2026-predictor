@@ -2899,7 +2899,6 @@ function renderPicksModal(preds, koState) {
 function getMatchLockTime(matchId) {
   const info = KO_MATCH_INFO[matchId];
   if (!info) return null;
-  // Parse "Sun Jun 28" + "3:00 PM ET"
   const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   const dateParts = info.date.trim().split(' '); // ["Sun","Jun","28"]
   const month = months[dateParts[1]];
@@ -2908,9 +2907,10 @@ function getMatchLockTime(matchId) {
   let [hrs, mins] = timeParts[0].split(':').map(Number);
   if (timeParts[1] === 'PM' && hrs !== 12) hrs += 12;
   if (timeParts[1] === 'AM' && hrs === 12) hrs = 0;
-  // ET = UTC-4 in summer
-  const utcHrs = hrs + 4;
-  return new Date(Date.UTC(2026, month, day, utcHrs, mins, 0));
+  // ET = UTC-4 in summer — use Date object to handle day rollover correctly
+  const etDate = new Date(Date.UTC(2026, month, day, hrs, mins, 0));
+  etDate.setUTCHours(etDate.getUTCHours() + 4); // convert ET → UTC
+  return etDate;
 }
 
 function isRedemptionMatchLocked(matchId) {
@@ -2969,12 +2969,41 @@ function computeActualStandings(letter) {
 }
 
 // Build the full redemption bracket state from actual results + redemption picks
+// Get the 8 best actual third-place teams ranked by pts/gd/gf
+// Only includes groups where all 3 matchday 3 games are played
+function getActualBestThirds() {
+  const thirds = [];
+  Object.keys(GROUPS).forEach(letter => {
+    const { sorted, stats, allPlayed } = computeActualStandings(letter);
+    if (!allPlayed) return; // skip groups not finished
+    const team = sorted[2]; // 3rd place team
+    if (!team) return;
+    thirds.push({
+      team,
+      group: letter,
+      pts: stats[team].pts,
+      gd:  stats[team].gd,
+      gf:  stats[team].gf
+    });
+  });
+  // Sort: pts desc, gd desc, gf desc, group alpha
+  thirds.sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf || a.group.localeCompare(b.group));
+
+  // The top 8 qualify — assign them to R32 slots based on their group
+  // Per FIFA Annex C we map group codes in each seed to the qualified thirds pool
+  // Build a lookup: group letter → team name (for the best 8)
+  const top8 = thirds.slice(0, 8);
+  const groupToTeam = {};
+  top8.forEach(t => { groupToTeam[t.group] = t.team; });
+  return groupToTeam;
+}
+
 function buildRedemptionState() {
   const state = {};
   // Populate R32 teams from actual group standings
   R32_SLOTS.forEach(([seedHome, seedAway], i) => {
     const id = `R32_${i}`;
-    function resolveActualSeed(seed) {
+    function resolveActualSeed(seed, bestThirds) {
       if (seed.startsWith('1') || seed.startsWith('2')) {
         const letter = seed[1];
         const pos = seed.startsWith('1') ? 0 : 1;
@@ -2983,13 +3012,20 @@ function buildRedemptionState() {
         return sorted[pos] || null;
       }
       if (seed.startsWith('3')) {
-        // Best third placers from actual results
-        return null; // simplified — show seed label
+        // Find which eligible group's 3rd place goes in this slot
+        // The seed codes (e.g. '3CEFHI') list the groups that can provide the 3rd placer
+        // Match the first eligible group letter that has a qualified 3rd place team
+        const eligibleGroups = seed.slice(1).split('');
+        for (const grp of eligibleGroups) {
+          if (bestThirds[grp]) return bestThirds[grp];
+        }
+        return null;
       }
       return null;
     }
-    const home = resolveActualSeed(seedHome);
-    const away = resolveActualSeed(seedAway);
+    const bestThirds = getActualBestThirds();
+    const home = resolveActualSeed(seedHome, bestThirds);
+    const away = resolveActualSeed(seedAway, bestThirds);
     state[id] = {
       homeTeam: home || (seedHome.startsWith('3') ? `3rd ${seedHome.slice(1)}` : `${seedHome.startsWith('1')?'W':'RU'} Grp ${seedHome[1]}`),
       awayTeam: away || (seedAway.startsWith('3') ? `3rd ${seedAway.slice(1)}` : `${seedAway.startsWith('1')?'W':'RU'} Grp ${seedAway[1]}`),
@@ -3053,25 +3089,18 @@ function renderRedemptionMatchEl(matchId, redState) {
   el.className = 'bracket-match';
   if (isTBD) el.style.opacity = '0.4';
 
-  // Determine result icon for each team
+  // Use same CSS classes as knockout bracket
   function teamClass(team) {
-    if (!myPick) return '';
     if (actualWinner) {
-      if (team === actualWinner && team === myPick) return 'winner'; // correct pick
+      // Result known — highlight actual winner, dim loser
       if (team === actualWinner) return 'winner';
+      return '';
     }
-    if (team === myPick) return 'tentative';
+    // No result yet — highlight user's pick like knockout 'tentative'
+    if (myPick === team) return 'winner'; // use winner styling for selected pick
+    if (myPick && myPick !== team) return ''; // other team fades via opacity in style
     return '';
   }
-  function pickIcon(team) {
-    if (!myPick) return '';
-    if (actualWinner) {
-      if (team === myPick && team === actualWinner) return ' ✓';
-      if (team === myPick && team !== actualWinner) return ' ✗';
-    } else if (team === myPick) return ' ←';
-    return '';
-  }
-
   const matchNum = koInfo?.match ? `<div style="font-size:10px;font-weight:700;color:var(--gold);font-family:Barlow Condensed,sans-serif;text-align:center;padding:3px 6px 1px;border-bottom:1px solid rgba(255,255,255,.06);letter-spacing:.5px">M${koInfo.match}</div>` : '';
   const dateLine = koInfo ? `<div class="bracket-meta">${koInfo.date} &middot; ${koInfo.time}${locked?' 🔒':''}</div>` : '';
 
