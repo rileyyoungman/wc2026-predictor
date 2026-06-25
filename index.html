@@ -616,7 +616,11 @@
     .leaderboard-table th:nth-child(4),
     .leaderboard-table td:nth-child(4),
     .leaderboard-table th:nth-child(5),
-    .leaderboard-table td:nth-child(5) { display: none; }
+    .leaderboard-table td:nth-child(5),
+    .leaderboard-table th:nth-child(6),
+    .leaderboard-table td:nth-child(6),
+    .leaderboard-table th:nth-child(7),
+    .leaderboard-table td:nth-child(7) { display: none; }
     .leaderboard-table td, .leaderboard-table th { padding: 8px 6px; }
     .points-cell { font-size: 16px; }
 
@@ -907,18 +911,18 @@
 
 <header>
   <div class="logo">&#127942; WC26 <span>PREDICTOR</span></div>
-  <button onclick="openVibes()" style="background:linear-gradient(135deg,#C8102E,#3CAC3B);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;font-family:Barlow Condensed,sans-serif;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;flex-shrink:0;animation:vibesPulse 2s infinite;" title="Click for Vibes">&#127926; Click for Vibes</button>
   <nav>
     <button class="active" onclick="showPage('groups')">Group Stage</button>
     <button onclick="showPage('knockout')">Knockout</button>
     <button onclick="showPage('leaderboard')">Leaderboard</button>
+    <button onclick="showPage('redemption')">Redemption</button>
     <button onclick="showPage('about')">About</button>
     <button id="admin-nav-btn" class="admin-btn" onclick="showPage('admin')">&#9881; Admin</button>
   </nav>
 </header>
 
 <div id="identity-bar">
-  <span id="lock-deadline-text" style="font-size:12px;color:var(--muted)">Group picks lock June 11 at 3pm ET &nbsp;|&nbsp; Knockout picks lock June 18 at 1pm ET &nbsp;|&nbsp; <span id="countdown-timer" style="font-family:Barlow Condensed,sans-serif;font-weight:700;color:var(--gold);letter-spacing:.5px"></span></span>
+  <span id="lock-deadline-text" style="font-size:12px;color:var(--muted)">Group picks lock June 11 at 3pm ET &nbsp;|&nbsp; Knockout picks lock June 28 at 3pm ET &nbsp;|&nbsp; <span id="countdown-timer" style="font-family:Barlow Condensed,sans-serif;font-weight:700;color:var(--gold);letter-spacing:.5px"></span></span>
   <span id="active-user" style="font-size:13px;color:var(--gold);font-weight:500;margin-left:12px"></span>
   <span id="tournament-lock" style="display:none;font-size:12px;color:#e74c3c;margin-left:8px">&#128274; Bracket locked — tournament has started</span>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
@@ -968,6 +972,25 @@
   </div>
   <div class="bracket-scroll">
     <div id="bracket" class="bracket"></div>
+  </div>
+</div>
+
+<!-- REDEMPTION PAGE -->
+<div id="page-redemption" class="page">
+  <div class="page-header">
+    <h1>Redemption Bracket</h1>
+    <p>Pick the winner of every knockout match using the real teams. +5 bonus points per correct pick. Each match locks at kickoff.</p>
+  </div>
+  <div class="score-legend">
+    <div class="legend-item"><span class="legend-icon">&#9917;</span>Correct pick (+5 pts every round)</div>
+    <div class="legend-item"><span class="legend-icon">&#128274;</span>Each match locks at kickoff</div>
+  </div>
+  <div id="redemption-notice" style="display:none;background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.4);border-radius:8px;padding:14px 18px;margin-bottom:1.5rem;">
+    <div style="font-size:14px;font-weight:700;color:#e74c3c;margin-bottom:6px;font-family:Barlow Condensed,sans-serif;letter-spacing:.5px">&#9888; Knockout teams not yet confirmed</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.5">The Redemption bracket will populate once actual Round of 32 teams are confirmed from the group stage results.</div>
+  </div>
+  <div class="bracket-scroll">
+    <div id="redemption-bracket" class="bracket"></div>
   </div>
 </div>
 
@@ -1527,6 +1550,7 @@ let currentUser = null;
 let allUsers = {};
 let predictions = {};
 let knockoutState = {};
+let redemptionPicks = {}; // { matchId: 'TeamName' }
 let modalContext = null;
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
@@ -1553,8 +1577,9 @@ async function loadUser(userId) {
       .eq('user_id', userId)
       .single();
     if (data) {
-      predictions   = data.predictions    || {};
-      knockoutState = data.knockout_state || {};
+      predictions    = data.predictions    || {};
+      knockoutState  = data.knockout_state || {};
+      redemptionPicks = data.redemption_picks || {};
       Object.entries(knockoutState).forEach(([id, s]) => {
         if (!id.startsWith('G') && s.home !== undefined && s.away !== undefined) {
           predictions[id] = { home: s.home, away: s.away };
@@ -1575,6 +1600,8 @@ async function loadLeaderboardData() {
     (accts || []).forEach(a => nameMap[a.id] = a.name);
     (preds || []).forEach(p => {
       const mergedPreds = Object.assign({}, p.predictions || {});
+      // Also attach redemption picks
+      if (p.redemption_picks) mergedPreds._redemptionPicks = p.redemption_picks;
       // Sync KO picks from knockout_state into predictions for counting/scoring
       const ks = p.knockout_state || {};
       Object.entries(ks).forEach(([id, s]) => {
@@ -1585,6 +1612,7 @@ async function loadLeaderboardData() {
       users[p.user_id] = {
         predictions:    mergedPreds,
         knockoutState:  ks,
+        redemptionPicks: p.redemption_picks || {},
         displayName:    nameMap[p.user_id] || p.user_id
       };
     });
@@ -1596,8 +1624,8 @@ async function loadLeaderboardData() {
 // Tournament starts June 11 2026 19:00 UTC (3pm ET)
 // Group stage locks at first kickoff: Jun 11 2026 3pm ET (19:00 UTC)
 const GROUP_LOCK_TIME = new Date('2026-06-11T19:00:00Z');
-// Knockout bracket locks at start of Matchday 2: Jun 18 2026 earliest game (17:00 UTC)
-const KNOCKOUT_LOCK_TIME = new Date('2026-06-18T17:00:00Z');
+// Knockout bracket locks at start of Round of 32: Jun 28 2026 19:00 UTC (first KO game)
+const KNOCKOUT_LOCK_TIME = new Date('2026-06-28T19:00:00Z');
 
 // Keep TOURNAMENT_START as alias for countdown timer
 const TOURNAMENT_START = GROUP_LOCK_TIME;
@@ -1847,6 +1875,7 @@ function showPage(name, skipEvent) {
   document.getElementById(`page-${name}`).classList.add('active');
   if (!skipEvent && event && event.target) event.target.classList.add('active');
   if (name === 'leaderboard') { renderLeaderboard(); startLeaderboardAutoRefresh(); }
+  if (name === 'redemption') renderRedemption();
   else { stopLeaderboardAutoRefresh(); }
   if (name === 'knockout') renderKnockout();
   if (name === 'admin') {
@@ -2634,8 +2663,8 @@ async function renderLeaderboard() {
   renderPredictedChampions(userData);
 
   const scored = Object.entries(userData).map(([id, data]) => {
-    let pts = calculatePoints(data.predictions || {}, data.knockoutState || {});
-    return { id, name: data.displayName || id, pts, predictions: data.predictions || {}, knockoutState: data.knockoutState || {} };
+    const breakdown = calculatePointsBreakdown(data.predictions || {}, data.knockoutState || {});
+    return { id, name: data.displayName || id, pts: breakdown.total, exactPts: breakdown.exact, resultPts: breakdown.result, oneScorePts: breakdown.oneScore, predictions: data.predictions || {}, knockoutState: data.knockoutState || {} };
   }).sort((a,b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
     // Tiebreaker: total goals predicted
@@ -2680,8 +2709,11 @@ async function renderLeaderboard() {
           <tr>
             <th>#</th>
             <th>Name</th>
-            <th>Points${matchesPlayed > 0 ? `<div style="font-size:9px;font-weight:400;color:var(--muted);letter-spacing:0">/${perfectScore} max</div>` : ''}</th>
-            <th>Predicted</th>
+            <th>Pts${matchesPlayed > 0 ? `<div style="font-size:9px;font-weight:400;color:var(--muted);letter-spacing:0">/${perfectScore} max</div>` : ''}</th>
+            <th style="font-size:10px;text-align:center">🏆<div style="font-weight:400;color:var(--muted)">Exact</div></th>
+            <th style="font-size:10px;text-align:center">⚽<div style="font-weight:400;color:var(--muted)">Result</div></th>
+            <th style="font-size:10px;text-align:center">🟡<div style="font-weight:400;color:var(--muted)">1 Score</div></th>
+            <th>Picks</th>
           </tr>
         </thead>
         <tbody>
@@ -2711,7 +2743,10 @@ async function renderLeaderboard() {
     html += `<tr class="${isYou?'you-row':''} lb-row-clickable" onclick="openPicksModal('${u.id}','${u.name.replace(/'/g,"\\'")}')">
       <td><span class="rank ${rankClass}">${rank}</span></td>
       <td>${medal ? `<span style="font-size:18px;margin-right:4px">${medal}</span>` : ''}${u.name}${isYou?'<span class="you-badge">you</span>':''}</td>
-      <td class="points-cell">${u.pts}</td>
+      <td class="points-cell">${u.pts}${u.redemptionPts > 0 ? '<span style="color:#3CAC3B;font-size:10px;font-weight:600;margin-left:4px">+' + u.redemptionPts + 'R</span>' : ''}</td>
+      <td style="text-align:center;font-size:13px;color:var(--gold);font-family:Barlow Condensed,sans-serif;font-weight:700">${u.exactPts||0}</td>
+      <td style="text-align:center;font-size:13px;color:#7A8DBF;font-family:Barlow Condensed,sans-serif;font-weight:700">${u.resultPts||0}</td>
+      <td style="text-align:center;font-size:13px;color:#F5C518;font-family:Barlow Condensed,sans-serif;font-weight:700">${u.oneScorePts||0}</td>
       <td style="color:var(--muted);font-size:12px">${groupCount}/${total} grp &nbsp; ${koCount}/${koTotal} ko</td>
     </tr>`;
   });
@@ -2854,6 +2889,295 @@ function renderPicksModal(preds, koState) {
   });
 
   body.innerHTML = html;
+}
+
+// ── REDEMPTION BRACKET ──────────────────────────────────────────────────────
+// Locked per-match at kickoff time using KO_MATCH_INFO dates
+// Uses ACTUAL_RESULTS to populate real teams once group stage is done
+
+// Convert KO_MATCH_INFO date string + time to a Date object for lock comparison
+function getMatchLockTime(matchId) {
+  const info = KO_MATCH_INFO[matchId];
+  if (!info) return null;
+  // Parse "Sun Jun 28" + "3:00 PM ET"
+  const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const dateParts = info.date.trim().split(' '); // ["Sun","Jun","28"]
+  const month = months[dateParts[1]];
+  const day   = parseInt(dateParts[2]);
+  const timeParts = info.time.replace(' ET','').trim().split(' '); // ["3:00","PM"]
+  let [hrs, mins] = timeParts[0].split(':').map(Number);
+  if (timeParts[1] === 'PM' && hrs !== 12) hrs += 12;
+  if (timeParts[1] === 'AM' && hrs === 12) hrs = 0;
+  // ET = UTC-4 in summer
+  const utcHrs = hrs + 4;
+  return new Date(Date.UTC(2026, month, day, utcHrs, mins, 0));
+}
+
+function isRedemptionMatchLocked(matchId) {
+  const lockTime = getMatchLockTime(matchId);
+  if (!lockTime) return false;
+  return new Date() >= lockTime;
+}
+
+// Get the real teams for each R32 slot from ACTUAL_RESULTS group standings
+// Once all 3 group games per group are FT, teams are confirmed
+function getRedemptionR32Teams() {
+  const teams = {};
+  R32_SLOTS.forEach(([seedHome, seedAway], i) => {
+    const id = `R32_${i}`;
+    // Use actual results to determine standings
+    function getTeamForSeed(seed) {
+      if (seed.startsWith('1') || seed.startsWith('2')) {
+        const letter = seed[1];
+        const pos = seed.startsWith('1') ? 0 : 1;
+        const { sorted, allPlayed } = computeGroupStandings(letter, true); // use ACTUAL_RESULTS
+        if (!allPlayed) return null;
+        return sorted[pos] || null;
+      }
+      // 3rd place — use actual best thirds
+      return null; // handled separately
+    }
+    teams[id] = {
+      home: getTeamForSeed(seedHome),
+      away: getTeamForSeed(seedAway),
+      seedHome, seedAway
+    };
+  });
+  return teams;
+}
+
+// Compute standings using actual results (for redemption)
+function computeActualStandings(letter) {
+  const teams = GROUPS[letter];
+  const stats = {};
+  teams.forEach(t => { stats[t] = { pts:0, gd:0, gf:0, ga:0, w:0, d:0, l:0 }; });
+  const matches = getGroupMatches(letter, teams);
+  let played = 0;
+  matches.forEach(m => {
+    const r = ACTUAL_RESULTS[m.id];
+    if (!r || r.home === undefined) return;
+    played++;
+    const h = r.home, a = r.away;
+    stats[m.home].gf += h; stats[m.home].ga += a; stats[m.home].gd += h-a;
+    stats[m.away].gf += a; stats[m.away].ga += h; stats[m.away].gd += a-h;
+    if (h > a)      { stats[m.home].pts+=3; stats[m.home].w++; stats[m.away].l++; }
+    else if (h < a) { stats[m.away].pts+=3; stats[m.away].w++; stats[m.home].l++; }
+    else            { stats[m.home].pts+=1; stats[m.away].pts+=1; stats[m.home].d++; stats[m.away].d++; }
+  });
+  const sorted = [...teams].sort((a,b) => stats[b].pts-stats[a].pts || stats[b].gd-stats[a].gd || stats[b].gf-stats[a].gf || a.localeCompare(b));
+  return { sorted, stats, played, allPlayed: played === matches.length };
+}
+
+// Build the full redemption bracket state from actual results + redemption picks
+function buildRedemptionState() {
+  const state = {};
+  // Populate R32 teams from actual group standings
+  R32_SLOTS.forEach(([seedHome, seedAway], i) => {
+    const id = `R32_${i}`;
+    function resolveActualSeed(seed) {
+      if (seed.startsWith('1') || seed.startsWith('2')) {
+        const letter = seed[1];
+        const pos = seed.startsWith('1') ? 0 : 1;
+        const { sorted, allPlayed } = computeActualStandings(letter);
+        if (!allPlayed) return null;
+        return sorted[pos] || null;
+      }
+      if (seed.startsWith('3')) {
+        // Best third placers from actual results
+        return null; // simplified — show seed label
+      }
+      return null;
+    }
+    const home = resolveActualSeed(seedHome);
+    const away = resolveActualSeed(seedAway);
+    state[id] = {
+      homeTeam: home || (seedHome.startsWith('3') ? `3rd ${seedHome.slice(1)}` : `${seedHome.startsWith('1')?'W':'RU'} Grp ${seedHome[1]}`),
+      awayTeam: away || (seedAway.startsWith('3') ? `3rd ${seedAway.slice(1)}` : `${seedAway.startsWith('1')?'W':'RU'} Grp ${seedAway[1]}`),
+      confirmed: !!(home && away)
+    };
+    // Cascade winner from actual results
+    const actual = ACTUAL_RESULTS[id];
+    if (actual && home && away) {
+      let winner;
+      if (actual.home > actual.away) winner = home;
+      else if (actual.away > actual.home) winner = away;
+      else if (actual.penHome !== undefined) winner = actual.penHome > actual.penAway ? home : away;
+      if (winner) state[id].actualWinner = winner;
+    }
+  });
+  // Cascade actual winners into R16+
+  Object.entries(ADVANCE_MAP).forEach(function(entry) {
+    const srcId  = entry[0];
+    const dstId  = entry[1][0];
+    const slot   = entry[1][1];
+    const src    = state[srcId] || {};
+    const teamKey = slot === 'home' ? 'homeTeam' : 'awayTeam';
+    if (src.actualWinner) {
+      if (!state[dstId]) state[dstId] = {};
+      state[dstId][teamKey] = src.actualWinner;
+      // Also cascade if this match's actual result exists
+      const actual = ACTUAL_RESULTS[dstId];
+      if (actual && state[dstId].homeTeam && state[dstId].awayTeam) {
+        const h = state[dstId].homeTeam, a = state[dstId].awayTeam;
+        let winner;
+        if (actual.home > actual.away) winner = h;
+        else if (actual.away > actual.home) winner = a;
+        else if (actual.penHome !== undefined) winner = actual.penHome > actual.penAway ? h : a;
+        if (winner) state[dstId].actualWinner = winner;
+      }
+    }
+  });
+  return state;
+}
+
+function saveRedemptionPick(matchId, team) {
+  if (!currentUser) { openAuthModal('login'); return; }
+  if (isRedemptionMatchLocked(matchId)) { showToast('This match has already kicked off.'); return; }
+  redemptionPicks[matchId] = team;
+  saveData();
+  renderRedemption();
+  showToast(`Picked ${team} ✓`);
+}
+
+function renderRedemptionMatchEl(matchId, redState) {
+  const info = redState[matchId] || {};
+  const home = info.homeTeam || 'TBD';
+  const away = info.awayTeam || 'TBD';
+  const myPick = redemptionPicks[matchId];
+  const actualWinner = info.actualWinner;
+  const locked = isRedemptionMatchLocked(matchId);
+  const koInfo = KO_MATCH_INFO[matchId];
+  const isTBD = !info.confirmed && (home.includes('Grp') || home.includes('3rd') || home === 'TBD');
+
+  const el = document.createElement('div');
+  el.className = 'bracket-match';
+  if (isTBD) el.style.opacity = '0.4';
+
+  // Determine result icon for each team
+  function teamClass(team) {
+    if (!myPick) return '';
+    if (actualWinner) {
+      if (team === actualWinner && team === myPick) return 'winner'; // correct pick
+      if (team === actualWinner) return 'winner';
+    }
+    if (team === myPick) return 'tentative';
+    return '';
+  }
+  function pickIcon(team) {
+    if (!myPick) return '';
+    if (actualWinner) {
+      if (team === myPick && team === actualWinner) return ' ✓';
+      if (team === myPick && team !== actualWinner) return ' ✗';
+    } else if (team === myPick) return ' ←';
+    return '';
+  }
+
+  const matchNum = koInfo?.match ? `<div style="font-size:10px;font-weight:700;color:var(--gold);font-family:Barlow Condensed,sans-serif;text-align:center;padding:3px 6px 1px;border-bottom:1px solid rgba(255,255,255,.06);letter-spacing:.5px">M${koInfo.match}</div>` : '';
+  const dateLine = koInfo ? `<div class="bracket-meta">${koInfo.date} &middot; ${koInfo.time}${locked?' 🔒':''}</div>` : '';
+
+  el.innerHTML = `
+    ${matchNum}
+    <div class="bracket-team ${teamClass(home)}" style="cursor:${(!locked&&!isTBD)?'pointer':'default'}" onclick="${(!locked&&!isTBD)?`saveRedemptionPick('${matchId}','${home.replace(/'/g,"\'")}')`:''}" >
+      <span>${home}${pickIcon(home)}</span>
+    </div>
+    <div class="bracket-team ${teamClass(away)}" style="cursor:${(!locked&&!isTBD)?'pointer':'default'}" onclick="${(!locked&&!isTBD)?`saveRedemptionPick('${matchId}','${away.replace(/'/g,"\'")}')`:''}" >
+      <span>${away}${pickIcon(away)}</span>
+    </div>
+    ${dateLine}
+  `;
+  return el;
+}
+
+function makeRedemptionRound(label, matchIds, redState) {
+  const col = document.createElement('div');
+  col.className = 'bracket-round';
+  col.innerHTML = `<div class="round-label">${label}</div>`;
+  const matchesDiv = document.createElement('div');
+  matchesDiv.className = 'bracket-matches';
+  matchIds.forEach(id => matchesDiv.appendChild(renderRedemptionMatchEl(id, redState)));
+  col.appendChild(matchesDiv);
+  return col;
+}
+
+function renderRedemption() {
+  const bracket = document.getElementById('redemption-bracket');
+  if (!bracket) return;
+  bracket.innerHTML = '';
+  bracket.className = 'bracket-two-sides';
+
+  const redState = buildRedemptionState();
+
+  // Check if any R32 teams are confirmed
+  const anyConfirmed = Object.values(redState).some(s => s.confirmed);
+  const notice = document.getElementById('redemption-notice');
+  if (notice) notice.style.display = anyConfirmed ? 'none' : 'block';
+
+  const leftSide = document.createElement('div');
+  leftSide.className = 'bracket-side';
+  leftSide.appendChild(makeRedemptionRound('Round of 32', ['R32_0','R32_1','R32_2','R32_3','R32_4','R32_5','R32_6','R32_7'], redState));
+  leftSide.appendChild(makeRedemptionRound('Round of 16', ['R16_0','R16_1','R16_2','R16_3'], redState));
+  leftSide.appendChild(makeRedemptionRound('Quarter-finals', ['QF_0','QF_1'], redState));
+  leftSide.appendChild(makeRedemptionRound('Semi-finals', ['SF_0'], redState));
+
+  const center = document.createElement('div');
+  center.className = 'bracket-center';
+  const centerLabel = document.createElement('div');
+  centerLabel.className = 'round-label';
+  centerLabel.style.cssText = 'width:100%;margin-bottom:8px;';
+  centerLabel.textContent = 'Finals';
+  center.appendChild(centerLabel);
+
+  const centerWrap = document.createElement('div');
+  centerWrap.className = 'center-match-wrap';
+
+  const finalLabel = document.createElement('div');
+  finalLabel.className = 'center-label';
+  finalLabel.textContent = 'Final';
+  centerWrap.appendChild(finalLabel);
+  centerWrap.appendChild(renderRedemptionMatchEl('F_0', redState));
+
+  // Champion display
+  const fs = redState['F_0'] || {};
+  const champ = fs.actualWinner || '?';
+  const myChampPick = redemptionPicks['F_0'];
+  const champDiv = document.createElement('div');
+  champDiv.className = 'champ-display';
+  const champCorrect = myChampPick && fs.actualWinner && myChampPick === fs.actualWinner;
+  champDiv.innerHTML = `
+    <div style="font-size:32px;margin-bottom:4px">&#127942;</div>
+    <div style="font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;color:var(--gold)">${champ}</div>
+    ${myChampPick ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Your pick: ${myChampPick} ${champCorrect?'✓':fs.actualWinner?'✗':''}</div>` : ''}
+  `;
+  centerWrap.appendChild(champDiv);
+
+  const tpLabel = document.createElement('div');
+  tpLabel.className = 'center-label';
+  tpLabel.textContent = '3rd Place';
+  centerWrap.appendChild(tpLabel);
+  centerWrap.appendChild(renderRedemptionMatchEl('TP_0', redState));
+  center.appendChild(centerWrap);
+
+  const rightSide = document.createElement('div');
+  rightSide.className = 'bracket-side right';
+  rightSide.appendChild(makeRedemptionRound('Round of 32', ['R32_8','R32_9','R32_10','R32_11','R32_12','R32_13','R32_14','R32_15'], redState));
+  rightSide.appendChild(makeRedemptionRound('Round of 16', ['R16_4','R16_5','R16_6','R16_7'], redState));
+  rightSide.appendChild(makeRedemptionRound('Quarter-finals', ['QF_2','QF_3'], redState));
+  rightSide.appendChild(makeRedemptionRound('Semi-finals', ['SF_1'], redState));
+
+  bracket.appendChild(leftSide);
+  bracket.appendChild(center);
+  bracket.appendChild(rightSide);
+}
+
+// Calculate redemption points for a user
+function calculateRedemptionPoints(picks, koState) {
+  let pts = 0;
+  const redState = buildRedemptionState(); // uses global ACTUAL_RESULTS
+  Object.entries(picks || {}).forEach(([matchId, pick]) => {
+    const info = redState[matchId] || {};
+    if (info.actualWinner && pick === info.actualWinner) pts += 5;
+  });
+  return pts;
 }
 
 // SCORING (loaded from Supabase results table, editable by admin)
@@ -3112,6 +3436,48 @@ const RESULT_POINTS = {
 function getResultPoints(matchId) {
   const round = matchId.split('_')[0];
   return RESULT_POINTS[round] || RESULT_POINTS['G'];
+}
+
+function calculatePointsBreakdown(preds, koState) {
+  // Returns { total, exact, result, oneScore }
+  let exact = 0, result = 0, oneScore = 0;
+  const ko = koState || {};
+  Object.entries(preds).forEach(([id, p]) => {
+    if (!p || p.home==='' || p.away==='') return;
+    const actual = ACTUAL_RESULTS[id];
+    if (!actual) return;
+    const ph = parseInt(p.home), pa = parseInt(p.away);
+    const ah = actual.home, aa = actual.away;
+    const isKnockout = !id.startsWith('G');
+    const resultPts = isKnockout ? getResultPoints(id) : 10;
+    let pWinner, aWinner;
+    if (isKnockout) {
+      if (ph === pa) {
+        const pp1 = p.penHome !== undefined ? parseInt(p.penHome) : -1;
+        const pp2 = p.penAway !== undefined ? parseInt(p.penAway) : -1;
+        pWinner = pp1 > pp2 ? (ko[id]?.homeTeam||'home') : (ko[id]?.awayTeam||'away');
+      } else {
+        pWinner = ph > pa ? (ko[id]?.homeTeam||'home') : (ko[id]?.awayTeam||'away');
+      }
+      if (ah === aa) {
+        const ap1 = actual.penHome !== undefined ? parseInt(actual.penHome) : -1;
+        const ap2 = actual.penAway !== undefined ? parseInt(actual.penAway) : -1;
+        aWinner = ap1 > ap2 ? actual.homeTeam : actual.awayTeam;
+      } else {
+        aWinner = ah > aa ? actual.homeTeam : actual.awayTeam;
+      }
+    } else {
+      pWinner = ph > pa ? 'H' : ph < pa ? 'A' : 'D';
+      aWinner = ah > aa ? 'H' : ah < aa ? 'A' : 'D';
+    }
+    const correctResult = pWinner === aWinner;
+    const exactScore = ph===ah && pa===aa;
+    const homeCorrect = ph===ah, awayCorrect = pa===aa;
+    if (exactScore) { exact += resultPts + 10; }
+    else if (correctResult) { result += resultPts; if (homeCorrect||awayCorrect) oneScore += 5; }
+    else if (homeCorrect || awayCorrect) { oneScore += 5; }
+  });
+  return { total: exact+result+oneScore, exact, result, oneScore };
 }
 
 function calculatePoints(preds, koState) {
