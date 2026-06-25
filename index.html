@@ -1093,7 +1093,7 @@
         </div>
 
         <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">Tiebreaker</div>
-        <p style="font-size:13px;color:var(--muted)">If two players finish with the same points, the player who predicted the most total goals across all matches wins the tiebreaker.</p>
+        <p style="font-size:13px;color:var(--muted)">If two players finish with the same points, the player whose total predicted goals is closest to the actual total goals scored wins the tiebreaker.</p>
       </div>
     </div>
   </div>
@@ -2667,10 +2667,22 @@ async function renderLeaderboard() {
     return { id, name: data.displayName || id, pts: breakdown.total, exactPts: breakdown.exact, resultPts: breakdown.result, oneScorePts: breakdown.oneScore, predictions: data.predictions || {}, knockoutState: data.knockoutState || {} };
   }).sort((a,b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
-    // Tiebreaker: total goals predicted
-    const goalsA = Object.values(a.predictions).reduce((s,p) => p && p.home!==undefined && p.away!==undefined ? s+(parseInt(p.home)||0)+(parseInt(p.away)||0) : s, 0);
-    const goalsB = Object.values(b.predictions).reduce((s,p) => p && p.home!==undefined && p.away!==undefined ? s+(parseInt(p.home)||0)+(parseInt(p.away)||0) : s, 0);
-    return goalsB - goalsA;
+    // Tiebreaker: closest total predicted goals to actual total goals
+    function goalDiff(preds) {
+      let predicted = 0, actual = 0;
+      Object.entries(preds).forEach(([id, p]) => {
+        if (!p || p.home === undefined || p.away === undefined) return;
+        const r = ACTUAL_RESULTS[id];
+        if (!r || r.home === undefined) return;
+        predicted += (parseInt(p.home)||0) + (parseInt(p.away)||0);
+        actual    += (r.home||0) + (r.away||0);
+      });
+      return Math.abs(predicted - actual);
+    }
+    const diffA = goalDiff(a.predictions);
+    const diffB = goalDiff(b.predictions);
+    // Lower diff = closer to actual = wins tiebreaker
+    return diffA - diffB;
   });
 
   if (scored.length === 0) {
