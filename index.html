@@ -3070,26 +3070,42 @@ function buildRedemptionState() {
       if (winner) state[id].actualWinner = winner;
     }
   });
-  // Cascade actual winners into R16+
-  Object.entries(ADVANCE_MAP).forEach(function(entry) {
-    const srcId  = entry[0];
-    const dstId  = entry[1][0];
-    const slot   = entry[1][1];
-    const src    = state[srcId] || {};
-    const teamKey = slot === 'home' ? 'homeTeam' : 'awayTeam';
-    if (src.actualWinner) {
-      if (!state[dstId]) state[dstId] = {};
-      state[dstId][teamKey] = src.actualWinner;
-      // Also cascade if this match's actual result exists
-      const actual = ACTUAL_RESULTS[dstId];
-      if (actual && state[dstId].homeTeam && state[dstId].awayTeam) {
-        const h = state[dstId].homeTeam, a = state[dstId].awayTeam;
-        let winner;
-        if (actual.home > actual.away) winner = h;
-        else if (actual.away > actual.home) winner = a;
-        else if (actual.penHome !== undefined) winner = actual.penHome > actual.penAway ? h : a;
-        if (winner) state[dstId].actualWinner = winner;
+  // Multi-pass cascade: propagate actual winners round by round
+  // Pass multiple times to handle deep chains (R32→R16→QF→SF→F)
+  for (let pass = 0; pass < 5; pass++) {
+    Object.entries(ADVANCE_MAP).forEach(function(entry) {
+      const srcId   = entry[0];
+      const dstId   = entry[1][0];
+      const slot    = entry[1][1];
+      const src     = state[srcId] || {};
+      const teamKey = slot === 'home' ? 'homeTeam' : 'awayTeam';
+      if (src.actualWinner) {
+        if (!state[dstId]) state[dstId] = {};
+        state[dstId][teamKey] = src.actualWinner;
+        // Check if dst match also has an actual result we can cascade
+        const actual = ACTUAL_RESULTS[dstId];
+        if (actual && state[dstId].homeTeam && state[dstId].awayTeam && !state[dstId].actualWinner) {
+          const h = state[dstId].homeTeam, a = state[dstId].awayTeam;
+          let winner;
+          if (actual.home > actual.away) winner = h;
+          else if (actual.away > actual.home) winner = a;
+          else if (actual.penHome !== undefined) winner = actual.penHome > actual.penAway ? h : a;
+          if (winner) state[dstId].actualWinner = winner;
+        }
       }
+    });
+  }
+  // Fill placeholder labels for R16+ slots that don't have a winner yet
+  Object.entries(ADVANCE_MAP).forEach(function(entry) {
+    const srcId   = entry[0];
+    const dstId   = entry[1][0];
+    const slot    = entry[1][1];
+    const src     = state[srcId] || {};
+    const teamKey = slot === 'home' ? 'homeTeam' : 'awayTeam';
+    if (!state[dstId]) state[dstId] = {};
+    if (!state[dstId][teamKey]) {
+      const koInfo  = KO_MATCH_INFO[srcId];
+      state[dstId][teamKey] = koInfo ? `W M${koInfo.match}` : 'TBD';
     }
   });
   return state;
@@ -3565,6 +3581,8 @@ function calculatePointsSplit(allPreds, koState) {
   const ko = koState || {};
   buildActualR32Teams();
   const r32Pool = getActualR32TeamPool();
+  // Get actual real teams for KO winner comparison
+  const actualRedState = buildRedemptionState();
 
   Object.entries(allPreds).forEach(([id, p]) => {
     if (!p || p.home === undefined || p.home === '' || p.away === undefined || p.away === '') return;
@@ -3581,19 +3599,24 @@ function calculatePointsSplit(allPreds, koState) {
       aW = ah > aa ? 'H' : ah < aa ? 'A' : 'D';
     } else {
       const ks = ko[id] || {};
+      // User's predicted winner
       if (ph === pa) {
         const pp1 = p.penHome !== undefined ? parseInt(p.penHome) : -1;
         const pp2 = p.penAway !== undefined ? parseInt(p.penAway) : -1;
-        pW = pp1 > pp2 ? (ks.homeTeam||'h') : (ks.awayTeam||'a');
+        pW = pp1 > pp2 ? (ks.homeTeam||'home') : (ks.awayTeam||'away');
       } else {
-        pW = ph > pa ? (ks.homeTeam||'h') : (ks.awayTeam||'a');
+        pW = ph > pa ? (ks.homeTeam||'home') : (ks.awayTeam||'away');
       }
+      // Actual winner — use redemption state (actual real teams)
+      const redSlot = actualRedState[id] || {};
+      const realHome = redSlot.homeTeam || ks.homeTeam || 'home';
+      const realAway = redSlot.awayTeam || ks.awayTeam || 'away';
       if (ah === aa) {
         const ap1 = actual.penHome !== undefined ? parseInt(actual.penHome) : -1;
         const ap2 = actual.penAway !== undefined ? parseInt(actual.penAway) : -1;
-        aW = ap1 > ap2 ? actual.homeTeam : actual.awayTeam;
+        aW = ap1 > ap2 ? realHome : realAway;
       } else {
-        aW = ah > aa ? actual.homeTeam : actual.awayTeam;
+        aW = ah > aa ? realHome : realAway;
       }
     }
 
