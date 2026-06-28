@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="1.0.38">
+  <meta name="app-version" content="1.0.39">
 <title>World Cup 2026 — Score Predictor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -3045,14 +3045,32 @@ function buildRedemptionState() {
       return null;
     }
     if (seed.startsWith('3')) {
-      // Find the eligible group whose 3rd place qualifies AND hasn't been assigned yet
-      const eligibleGroups = seed.slice(1).split('');
-      for (const grp of eligibleGroups) {
-        const team = bestThirds[grp];
-        if (team && !assignedThirds.has(team)) {
-          assignedThirds.add(team);
-          return team;
-        }
+      // FIFA Annex C assigns 3rd place teams to specific slots based on which groups qualified.
+      // Rather than using a generic algorithm (which fails), we use a direct slot→group lookup
+      // derived from the actual FIFA bracket assignment for this tournament's combination.
+      // Confirmed R32 3rd place assignments (from official bracket):
+      // R32_1 (3ABCDF) = Paraguay (Group D)
+      // R32_4 (3CDFGH) = Sweden (Group F)
+      // R32_6 (3CEFHI) = Ecuador (Group E)
+      // R32_7 (3EHIJK) = DR Congo (Group K)
+      // R32_8 (3BEFIJ) = Bosnia & Herzegovina (Group B)
+      // R32_9 (3AEHIJ) = Senegal (Group I)
+      // R32_12(3EFGIJ) = Algeria (Group J)
+      // R32_15(3DEIJL) = Ghana (Group L)
+      const thirdSlotMap = {
+        'R32_1':  'D', // Paraguay
+        'R32_4':  'F', // Sweden
+        'R32_6':  'E', // Ecuador
+        'R32_7':  'K', // DR Congo
+        'R32_8':  'B', // Bosnia & Herzegovina
+        'R32_9':  'I', // Senegal
+        'R32_12': 'J', // Algeria
+        'R32_15': 'L', // Ghana
+      };
+      const assignedGroup = thirdSlotMap[id];
+      if (assignedGroup) {
+        const team = bestThirds[assignedGroup];
+        return team || null;
       }
       return null;
     }
@@ -3979,7 +3997,7 @@ function showFirstPlacePopup() {
 
 
 // ── CACHE VERSION CHECK ──────────────────────────────────────────────────────
-const CACHE_VERSION = '1.0.38';
+const CACHE_VERSION = '1.0.39';
 
 function showCachePopup() {
   // Build the popup fresh and inject into body
