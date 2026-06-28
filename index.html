@@ -2652,6 +2652,8 @@ function renderPredictedChampions(userData) {
 async function renderLeaderboard() {
   const container = document.getElementById('leaderboard-content');
   container.innerHTML = '<div style="color:var(--muted);padding:2rem 1rem;text-align:center">Loading...</div>';
+  // Always load fresh actual results before computing scores
+  await loadActualResults();
   const userData = await loadLeaderboardData();
   if (currentUser && predictions) {
     const myName = document.getElementById('active-user').textContent || currentUser;
@@ -2763,22 +2765,16 @@ async function renderLeaderboard() {
     const rank = i+1;
     const rankClass = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
     const isYou = u.id === currentUser;
-    const groupCount = Object.entries(u.predictions).filter(([id,p]) =>
-      id.startsWith('G') && p && p.home !== undefined && p.home !== '' && p.away !== undefined && p.away !== ''
-    ).length;
-    const koCount = Object.entries(u.knockoutState || {}).filter(([id,s]) =>
-      !id.startsWith('G') && s && s.home !== undefined && s.away !== undefined
-    ).length;
-    const koTotal = 32; // R32(16)+R16(8)+QF(4)+SF(2)+F(1)+TP(1)
     const medal = rank===1 ? '&#129351;' : rank===2 ? '&#129352;' : '';
-    html += `<tr class="${isYou?'you-row':''} lb-row-clickable" onclick="openPicksModal('${u.id}','${u.name.replace(/'/g,"\\'")}')">
+    const remainPts = isYou ? calculateRemainingPoints(u.knockoutState) : null;
+    html += `<tr class="${isYou?'you-row':''} lb-row-clickable" onclick="openPicksModal('${u.id}','${u.name.replace(/'/g, "\\'")}')">
       <td><span class="rank ${rankClass}">${rank}</span></td>
       <td>${medal ? `<span style="font-size:18px;margin-right:4px">${medal}</span>` : ''}${u.name}${isYou?'<span class="you-badge">you</span>':''}</td>
-      <td class="points-cell">${u.pts}${u.redemptionPts > 0 ? '<span style="color:#3CAC3B;font-size:10px;font-weight:600;margin-left:4px">+' + u.redemptionPts + 'R</span>' : ''}</td>
-      <td style="text-align:center;font-size:13px;color:var(--gold);font-family:Barlow Condensed,sans-serif;font-weight:700">${u.exactPts||0}</td>
-      <td style="text-align:center;font-size:13px;color:#7A8DBF;font-family:Barlow Condensed,sans-serif;font-weight:700">${u.resultPts||0}</td>
-      <td style="text-align:center;font-size:13px;color:#F5C518;font-family:Barlow Condensed,sans-serif;font-weight:700">${u.oneScorePts||0}</td>
-      <td style="color:var(--muted);font-size:12px">${groupCount}/${total} grp &nbsp; ${koCount}/${koTotal} ko</td>
+      <td class="points-cell" style="font-size:16px">${u.pts}${u.redemptionPts > 0 ? '<div style="color:#3CAC3B;font-size:9px;font-weight:600;line-height:1">+'+u.redemptionPts+'R</div>' : ''}</td>
+      <td style="text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700;color:var(--muted)">${u.groupPts||0}</td>
+      <td style="text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700;color:var(--muted)">${u.koPts||0}</td>
+      ${anyR32Confirmed ? `<td style="text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700;color:${(u.r32Team||0)>24?'var(--gold)':(u.r32Team||0)>16?'#7A8DBF':'var(--muted)'}">${u.r32Team||0}/32</td><td style="text-align:center;font-size:13px;font-family:Barlow Condensed,sans-serif;font-weight:700;color:${(u.r32Seed||0)>24?'var(--gold)':(u.r32Seed||0)>16?'#7A8DBF':'var(--muted)'}">${u.r32Seed||0}/32</td>` : ''}
+      <td style="text-align:center;font-size:12px;color:#3CAC3B;font-weight:700">${remainPts !== null ? '+'+remainPts : '—'}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
