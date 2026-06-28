@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="1.0.32">
+  <meta name="app-version" content="1.0.33">
 <title>World Cup 2026 — Score Predictor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -2999,16 +2999,26 @@ function computeActualStandings(letter) {
 function getActualBestThirds() {
   const thirds = [];
   Object.keys(GROUPS).forEach(letter => {
-    const { sorted, stats, played } = computeActualStandings(letter);
-    if (played < 3) return; // need at least half the games to rank 3rd place
+    // Try actual results first, fall back to user predictions
+    let sorted, stats, played;
+    const actual = computeActualStandings(letter);
+    if (actual.played >= 3) {
+      ({ sorted, stats, played } = actual);
+    } else {
+      const predicted = computeGroupStandings(letter);
+      if (!predicted.anyPlayed) return;
+      sorted = predicted.sorted;
+      stats  = predicted.stats;
+      played = 3; // treat as sufficient
+    }
     const team = sorted[2]; // 3rd place team
     if (!team) return;
     thirds.push({
       team,
       group: letter,
-      pts: stats[team].pts,
-      gd:  stats[team].gd,
-      gf:  stats[team].gf
+      pts: stats[team].pts || 0,
+      gd:  stats[team].gd  || 0,
+      gf:  stats[team].gf  || 0
     });
   });
   // Sort: pts desc, gd desc, gf desc, group alpha
@@ -3032,14 +3042,15 @@ function buildRedemptionState() {
       if (seed.startsWith('1') || seed.startsWith('2')) {
         const letter = seed[1];
         const pos = seed.startsWith('1') ? 0 : 1;
-        const { sorted, played } = computeActualStandings(letter);
-        if (played === 0) return null; // no data at all
-        return sorted[pos] || null;
+        // Try actual results first
+        const actual = computeActualStandings(letter);
+        if (actual.played > 0) return actual.sorted[pos] || null;
+        // Fall back to user's group predictions
+        const predicted = computeGroupStandings(letter);
+        if (predicted.anyPlayed) return predicted.sorted[pos] || null;
+        return null;
       }
       if (seed.startsWith('3')) {
-        // Find which eligible group's 3rd place goes in this slot
-        // The seed codes (e.g. '3CEFHI') list the groups that can provide the 3rd placer
-        // Match the first eligible group letter that has a qualified 3rd place team
         const eligibleGroups = seed.slice(1).split('');
         for (const grp of eligibleGroups) {
           if (bestThirds[grp]) return bestThirds[grp];
@@ -3955,7 +3966,7 @@ function showFirstPlacePopup() {
 
 
 // ── CACHE VERSION CHECK ──────────────────────────────────────────────────────
-const CACHE_VERSION = '1.0.32';
+const CACHE_VERSION = '1.0.33';
 
 function showCachePopup() {
   // Build the popup fresh and inject into body
