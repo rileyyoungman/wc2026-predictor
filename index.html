@@ -934,6 +934,7 @@
 
 <!-- GROUP STAGE PAGE -->
 <div id="page-groups" class="page active">
+  <div id="locked-banner-groups" class="locked-banner" style="display:none">&#128274; Group stage predictions are locked — the tournament has started.</div>
   <div class="page-header">
     <h1>Group Stage Predictions</h1>
     <p>Welcome to the 2026 World Cup Predictor. Please select the score of all group games (wins, draws, and losses allowed) then select the winner of each knockout match starting with the Round of 32 that will automatically populate opponents based on your predicted group results.</p>
@@ -949,6 +950,7 @@
 
 <!-- KNOCKOUT PAGE -->
 <div id="page-knockout" class="page">
+  <div id="locked-banner-knockout" class="locked-banner" style="display:none">&#128274; Knockout predictions are locked.</div>
   <div class="page-header">
     <h1>Knockout Stage</h1>
     <p>Teams are auto-filled from your group stage predictions. Click any match to predict the score — winners advance automatically.</p>
@@ -1129,12 +1131,7 @@
 </div>
 
 <!-- LOCKED BANNERS (shown on group/knockout pages after tournament starts) -->
-<div id="locked-banner-groups" class="locked-banner">
-  &#128274; The tournament has started — predictions are now locked.
-</div>
-<div id="locked-banner-knockout" class="locked-banner">
-  &#128274; The tournament has started — predictions are now locked.
-</div>
+
 
 <!-- AUTH MODAL -->
 <div id="auth-overlay" class="auth-overlay hidden">
@@ -1875,8 +1872,8 @@ function showPage(name, skipEvent) {
   document.getElementById(`page-${name}`).classList.add('active');
   if (!skipEvent && event && event.target) event.target.classList.add('active');
   if (name === 'leaderboard') { renderLeaderboard(); startLeaderboardAutoRefresh(); }
-  if (name === 'redemption') renderRedemption();
   else { stopLeaderboardAutoRefresh(); }
+  if (name === 'redemption') renderRedemption();
   if (name === 'knockout') renderKnockout();
   if (name === 'admin') {
     if (!isAdminAuthed) {
@@ -2663,15 +2660,23 @@ async function renderLeaderboard() {
   renderPredictedChampions(userData);
 
   const scored = Object.entries(userData).map(([id, data]) => {
-    const split = calculatePointsSplit(data.predictions || {}, data.knockoutState || {});
-    const rPts  = calculateRedemptionPoints(data.redemptionPicks || {}, data.knockoutState || {});
-    const r32acc = countR32Accuracy(data.knockoutState || {});
+    // Merge KO picks from knockoutState into preds so calculatePointsSplit sees them
+    const preds = Object.assign({}, data.predictions || {});
+    const ks = data.knockoutState || {};
+    Object.entries(ks).forEach(([mid, s]) => {
+      if (!mid.startsWith('G') && s && s.home !== undefined && s.away !== undefined) {
+        preds[mid] = { home: s.home, away: s.away, penHome: s.penHome, penAway: s.penAway };
+      }
+    });
+    const split  = calculatePointsSplit(preds, ks);
+    const rPts   = calculateRedemptionPoints(data.redemptionPicks || {}, ks);
+    const r32acc = countR32Accuracy(ks);
     return {
       id, name: data.displayName || id,
       pts: split.total + rPts,
       groupPts: split.group, koPts: split.ko, redemptionPts: rPts,
       r32Team: r32acc.correctTeam, r32Seed: r32acc.correctSeed,
-      predictions: data.predictions || {}, knockoutState: data.knockoutState || {}
+      predictions: preds, knockoutState: ks
     };
   }).sort((a,b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
@@ -3162,10 +3167,8 @@ async function renderRedemption() {
   if (!bracket) return;
   bracket.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Loading...</div>';
 
-  // Ensure actual results are loaded before rendering
-  if (Object.keys(ACTUAL_RESULTS).length === 0) {
-    await loadActualResults();
-  }
+  // Always reload actual results to get latest data
+  await loadActualResults();
 
   bracket.innerHTML = '';
   bracket.className = 'bracket-two-sides';
@@ -3545,40 +3548,55 @@ function calculatePointsBreakdown(preds, koState) {
 }
 
 // Split points into group and KO
-function calculatePointsSplit(preds, koState) {
+function calculatePointsSplit(allPreds, koState) {
+  // allPreds contains both group (G*) and ko picks merged together
+  // koState contains homeTeam/awayTeam for each KO match
   let groupPts = 0, koPts = 0;
   const ko = koState || {};
   buildActualR32Teams();
-  const r32PoolSplit = getActualR32TeamPool();
-  Object.entries(preds).forEach(([id, p]) => {
-    if (!p || p.home==='' || p.away==='') return;
+  const r32Pool = getActualR32TeamPool();
+
+  Object.entries(allPreds).forEach(([id, p]) => {
+    if (!p || p.home === undefined || p.home === '' || p.away === undefined || p.away === '') return;
     const actual = ACTUAL_RESULTS[id];
     if (!actual || actual.home === undefined) return;
     const ph = parseInt(p.home), pa = parseInt(p.away);
     const ah = actual.home, aa = actual.away;
     const isKO = !id.startsWith('G');
     const rPts = isKO ? getResultPoints(id) : 10;
+
     let pW, aW;
-    if (isKO) {
-      pW = ph > pa ? (ko[id]?.homeTeam||'h') : ph < pa ? (ko[id]?.awayTeam||'a') : (p.penHome > p.penAway ? (ko[id]?.homeTeam||'h') : (ko[id]?.awayTeam||'a'));
-      aW = ah > aa ? actual.homeTeam : ah < aa ? actual.awayTeam : (actual.penHome > actual.penAway ? actual.homeTeam : actual.awayTeam);
-    } else {
+    if (!isKO) {
       pW = ph > pa ? 'H' : ph < pa ? 'A' : 'D';
       aW = ah > aa ? 'H' : ah < aa ? 'A' : 'D';
+    } else {
+      const ks = ko[id] || {};
+      if (ph === pa) {
+        const pp1 = p.penHome !== undefined ? parseInt(p.penHome) : -1;
+        const pp2 = p.penAway !== undefined ? parseInt(p.penAway) : -1;
+        pW = pp1 > pp2 ? (ks.homeTeam||'h') : (ks.awayTeam||'a');
+      } else {
+        pW = ph > pa ? (ks.homeTeam||'h') : (ks.awayTeam||'a');
+      }
+      if (ah === aa) {
+        const ap1 = actual.penHome !== undefined ? parseInt(actual.penHome) : -1;
+        const ap2 = actual.penAway !== undefined ? parseInt(actual.penAway) : -1;
+        aW = ap1 > ap2 ? actual.homeTeam : actual.awayTeam;
+      } else {
+        aW = ah > aa ? actual.homeTeam : actual.awayTeam;
+      }
     }
-    const exact = ph===ah && pa===aa;
+
+    const exact   = ph === ah && pa === aa;
     const correct = pW === aW;
-    const oneScore = ph===ah || pa===aa;
+    const oneScore = ph === ah || pa === aa;
     let pts = 0;
-    if (exact) pts = rPts + 10;
+    if (exact) { pts = rPts + 10; }
     else if (correct) { pts = rPts; if (oneScore) pts += 5; }
-    else if (id.startsWith('R32_') && r32PoolSplit.size > 0) {
-      // Partial credit: predicted winner made R32 in wrong slot
-      const predictedWinner = pW;
-      if (predictedWinner && r32PoolSplit.has(predictedWinner)) {
-        pts = Math.floor(rPts / 2);
-      } else if (oneScore) pts = 5;
-    } else if (oneScore) pts = 5;
+    else if (id.startsWith('R32_') && r32Pool.size > 0 && r32Pool.has(pW)) {
+      pts = Math.floor(rPts / 2); // partial credit: right team, wrong slot
+    } else if (oneScore) { pts = 5; }
+
     if (isKO) koPts += pts; else groupPts += pts;
   });
   return { group: groupPts, ko: koPts, total: groupPts + koPts };
@@ -3590,21 +3608,26 @@ function calculatePointsSplit(preds, koState) {
 function countR32Accuracy(userKoState) {
   let correctTeam = 0, correctSeed = 0;
   const ks = userKoState || {};
+  buildActualR32Teams(); // ensure up to date
+  // Build pool of all actual R32 teams
+  const actualPool = new Set(
+    Object.values(actualR32Teams).flatMap(s => [s.home, s.away]).filter(Boolean)
+  );
+  if (actualPool.size === 0) return { correctTeam: 0, correctSeed: 0 };
+
   R32_SLOTS.forEach(([seedHome, seedAway], i) => {
     const id = `R32_${i}`;
-    const userHome = ks[id]?.homeTeam;
-    const userAway = ks[id]?.awayTeam;
-    // Get actual teams in this slot
-    const actHome = actualR32Teams[id]?.home;
-    const actAway = actualR32Teams[id]?.away;
-    if (!actHome || !actAway) return;
-    // All actual R32 teams (pool)
-    const actualPool = Object.values(actualR32Teams).flatMap(s => [s.home, s.away]).filter(Boolean);
-    if (userHome && actualPool.includes(userHome)) correctTeam++;
-    if (userAway && actualPool.includes(userAway)) correctTeam++;
-    // Correct seed = team in the exact right slot
-    if (userHome && userHome === actHome) correctSeed++;
-    if (userAway && userAway === actAway) correctSeed++;
+    const slot = ks[id] || {};
+    const userHome = slot.homeTeam;
+    const userAway = slot.awayTeam;
+    const actHome  = actualR32Teams[id]?.home;
+    const actAway  = actualR32Teams[id]?.away;
+    // Correct team (any slot)
+    if (userHome && actualPool.has(userHome)) correctTeam++;
+    if (userAway && actualPool.has(userAway)) correctTeam++;
+    // Correct seed (exact slot)
+    if (actHome && userHome === actHome) correctSeed++;
+    if (actAway && userAway === actAway) correctSeed++;
   });
   return { correctTeam, correctSeed };
 }
