@@ -2996,19 +2996,15 @@ function computeActualStandings(letter) {
     else            { stats[m.home].pts+=1; stats[m.away].pts+=1; stats[m.home].d++; stats[m.away].d++; }
   });
   const sorted = [...teams].sort((a,b) => stats[b].pts-stats[a].pts || stats[b].gd-stats[a].gd || stats[b].gf-stats[a].gf || a.localeCompare(b));
-  const allPlayed = played === matches.length;
-  // If most games are played (Matchday 3 complete = 6/6), treat as complete
-  // Use >= 5 to handle any missing data gracefully
-  const effectivelyDone = played >= 5;
-  return { sorted, stats, played, allPlayed: allPlayed || effectivelyDone };
+  return { sorted, stats, played, allPlayed: played === matches.length };
 }
 
 // Get the 8 best actual third-place teams ranked by pts/gd/gf
 function getActualBestThirds() {
   const thirds = [];
   Object.keys(GROUPS).forEach(letter => {
-    const { sorted, stats, allPlayed } = computeActualStandings(letter);
-    if (!allPlayed) return; // skip groups not finished
+    const { sorted, stats, played } = computeActualStandings(letter);
+    if (played < 3) return; // need at least half the games to rank 3rd place
     const team = sorted[2]; // 3rd place team
     if (!team) return;
     thirds.push({
@@ -3040,9 +3036,8 @@ function buildRedemptionState() {
       if (seed.startsWith('1') || seed.startsWith('2')) {
         const letter = seed[1];
         const pos = seed.startsWith('1') ? 0 : 1;
-        const { sorted, allPlayed, played } = computeActualStandings(letter);
-        // Show teams even if not all 6 games played — use best available standings
-        if (played === 0) return null;
+        const { sorted, played } = computeActualStandings(letter);
+        if (played === 0) return null; // no data at all
         return sorted[pos] || null;
       }
       if (seed.startsWith('3')) {
@@ -3173,7 +3168,14 @@ async function renderRedemption() {
   bracket.innerHTML = '';
   bracket.className = 'bracket-two-sides';
 
-  const redState = buildRedemptionState();
+  let redState = {};
+  try {
+    redState = buildRedemptionState();
+  } catch(e) {
+    console.error('buildRedemptionState error:', e);
+    bracket.innerHTML = '<div style="color:#e74c3c;padding:2rem;text-align:center">Error building bracket: ' + e.message + '</div>';
+    return;
+  }
 
   // Group stage is over — always show bracket, hide notice
   const notice = document.getElementById('redemption-notice');
@@ -3393,24 +3395,32 @@ function renderAdminGroupResults() {
 
 function renderAdminKnockoutResults() {
   const container = document.getElementById('admin-knockout-content');
-  const rounds = ['R32','R16','QF','SF','F'];
-  const counts = { R32:16, R16:8, QF:4, SF:2, F:1 };
-  const roundNames = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-finals', SF:'Semi-finals', F:'Final' };
-  let html = '<p style="color:var(--muted);font-size:12px;margin-bottom:1rem">Enter official knockout results. Home team listed first. In extra time / penalties, enter the score after 90 mins (add a note if needed).</p>';
+  // Build actual teams from real results for admin display
+  buildActualR32Teams();
+  const redState = buildRedemptionState(); // uses actual results to get real teams
+
+  const rounds = ['R32','R16','QF','SF','F','TP'];
+  const counts = { R32:16, R16:8, QF:4, SF:2, F:1, TP:1 };
+  const roundNames = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-finals', SF:'Semi-finals', F:'Final', TP:'3rd Place' };
+  let html = '<p style="color:var(--muted);font-size:12px;margin-bottom:1rem">Enter official knockout results. Home team listed first. In extra time / penalties, enter 90-min score then penalty scores.</p>';
   rounds.forEach(round => {
     html += `<div class="admin-group-section">
       <div class="admin-group-title">${roundNames[round]}</div>`;
     for (let i = 0; i < counts[round]; i++) {
-      const id = round === 'F' ? 'F_0' : `${round}_${i}`;
-      const state = knockoutState[id] || {};
-      const home = state.homeTeam || `Match ${i+1} Home`;
-      const away = state.awayTeam || `Match ${i+1} Away`;
+      const id = (round === 'F' || round === 'TP') ? `${round}_0` : `${round}_${i}`;
+      // Use actual real teams from redemption state (based on real group results)
+      const realSlot = redState[id] || {};
+      const koInfo = KO_MATCH_INFO[id];
+      const home = realSlot.homeTeam || knockoutState[id]?.homeTeam || `Match ${i+1} Home`;
+      const away = realSlot.awayTeam || knockoutState[id]?.awayTeam || `Match ${i+1} Away`;
       const r = ACTUAL_RESULTS[id];
       const h = r !== undefined ? r.home : '';
       const a = r !== undefined ? r.away : '';
       const saved = r !== undefined;
       const isPen = saved && r.home === r.away;
+      const matchLabel = koInfo ? `M${koInfo.match} · ${koInfo.date} · ${koInfo.time}` : '';
       html += `<div class="admin-match-row" style="flex-wrap:wrap">
+        ${matchLabel ? `<div style="width:100%;font-size:10px;color:var(--muted);padding-bottom:4px;letter-spacing:.3px">${matchLabel}</div>` : ''}
         <span class="admin-team" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;font-size:12px">
           <span>${home}</span>${flagImg(home, 28, 21) || '❓'}
         </span>
