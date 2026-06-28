@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="1.0.36">
+  <meta name="app-version" content="1.0.38">
 <title>World Cup 2026 — Score Predictor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -1494,16 +1494,16 @@ const KO_MATCH_INFO = {
   // Round of 32 — matches 73-88
   'R32_0':  { match:73,  date:'Sun Jun 28', time:'3:00 PM ET',  venue:'Los Angeles' },
   'R32_1':  { match:74,  date:'Mon Jun 29', time:'4:30 PM ET',  venue:'Boston' },
-  'R32_2':  { match:75,  date:'Mon Jun 29', time:'1:00 PM ET',  venue:'Houston' },
-  'R32_3':  { match:76,  date:'Mon Jun 29', time:'9:00 PM ET',  venue:'Guadalajara' },
+  'R32_2':  { match:75,  date:'Mon Jun 29', time:'1:00 PM ET',  venue:'Houston' },        // Brazil vs Japan ✓
+  'R32_3':  { match:76,  date:'Mon Jun 29', time:'9:00 PM ET',  venue:'Monterrey' },      // Netherlands vs Morocco ✓
   'R32_4':  { match:77,  date:'Tue Jun 30', time:'5:00 PM ET',  venue:'New York/NJ' },
   'R32_5':  { match:78,  date:'Tue Jun 30', time:'1:00 PM ET',  venue:'Dallas' },
   'R32_6':  { match:79,  date:'Tue Jun 30', time:'9:00 PM ET',  venue:'Mexico City' },
   'R32_7':  { match:80,  date:'Wed Jul 1',  time:'12:00 PM ET', venue:'Atlanta' },
   'R32_8':  { match:81,  date:'Wed Jul 1',  time:'5:00 PM ET',  venue:'San Francisco' },
   'R32_9':  { match:82,  date:'Wed Jul 1',  time:'4:00 PM ET',  venue:'Seattle' },
-  'R32_10': { match:83,  date:'Thu Jul 2',  time:'2:00 PM ET',  venue:'Toronto' },
-  'R32_11': { match:84,  date:'Thu Jul 2',  time:'6:00 PM ET',  venue:'Miami' },
+  'R32_10': { match:83,  date:'Thu Jul 2',  time:'3:00 PM ET',  venue:'Los Angeles' },  // Spain vs Austria
+  'R32_11': { match:84,  date:'Thu Jul 2',  time:'7:00 PM ET',  venue:'Toronto' },       // Portugal vs Croatia
   'R32_12': { match:85,  date:'Thu Jul 2',  time:'3:00 PM ET',  venue:'Vancouver' },
   'R32_13': { match:86,  date:'Thu Jul 2',  time:'6:00 PM ET',  venue:'Miami' },
   'R32_14': { match:87,  date:'Fri Jul 3',  time:'2:00 PM ET',  venue:'Dallas' },
@@ -3031,31 +3031,39 @@ function getActualBestThirds() {
 
 function buildRedemptionState() {
   const state = {};
-  // Populate R32 teams from actual group standings
-  R32_SLOTS.forEach(([seedHome, seedAway], i) => {
-    const id = `R32_${i}`;
-    function resolveActualSeed(seed, bestThirds) {
-      if (seed.startsWith('1') || seed.startsWith('2')) {
-        const letter = seed[1];
-        const pos = seed.startsWith('1') ? 0 : 1;
-        // Try actual results first
-        const actual = computeActualStandings(letter);
-        if (actual.played > 0) return actual.sorted[pos] || null;
-        // No actual results yet for this group
-        return null;
-      }
-      if (seed.startsWith('3')) {
-        const eligibleGroups = seed.slice(1).split('');
-        for (const grp of eligibleGroups) {
-          if (bestThirds[grp]) return bestThirds[grp];
+
+  // Build bestThirds lookup ONCE and track which have been assigned
+  const bestThirds = getActualBestThirds();
+  const assignedThirds = new Set(); // track used 3rd place teams to avoid duplicates
+
+  function resolveActualSeed(seed) {
+    if (seed.startsWith('1') || seed.startsWith('2')) {
+      const letter = seed[1];
+      const pos = seed.startsWith('1') ? 0 : 1;
+      const actual = computeActualStandings(letter);
+      if (actual.played > 0) return actual.sorted[pos] || null;
+      return null;
+    }
+    if (seed.startsWith('3')) {
+      // Find the eligible group whose 3rd place qualifies AND hasn't been assigned yet
+      const eligibleGroups = seed.slice(1).split('');
+      for (const grp of eligibleGroups) {
+        const team = bestThirds[grp];
+        if (team && !assignedThirds.has(team)) {
+          assignedThirds.add(team);
+          return team;
         }
-        return null;
       }
       return null;
     }
-    const bestThirds = getActualBestThirds();
-    const home = resolveActualSeed(seedHome, bestThirds);
-    const away = resolveActualSeed(seedAway, bestThirds);
+    return null;
+  }
+
+  // Populate R32 teams from actual group standings
+  R32_SLOTS.forEach(([seedHome, seedAway], i) => {
+    const id = `R32_${i}`;
+    const home = resolveActualSeed(seedHome);
+    const away = resolveActualSeed(seedAway);
     state[id] = {
       homeTeam: home || (seedHome.startsWith('3') ? `3rd ${seedHome.slice(1)}` : `${seedHome.startsWith('1')?'W':'RU'} Grp ${seedHome[1]}`),
       awayTeam: away || (seedAway.startsWith('3') ? `3rd ${seedAway.slice(1)}` : `${seedAway.startsWith('1')?'W':'RU'} Grp ${seedAway[1]}`),
@@ -3971,7 +3979,7 @@ function showFirstPlacePopup() {
 
 
 // ── CACHE VERSION CHECK ──────────────────────────────────────────────────────
-const CACHE_VERSION = '1.0.36';
+const CACHE_VERSION = '1.0.38';
 
 function showCachePopup() {
   // Build the popup fresh and inject into body
