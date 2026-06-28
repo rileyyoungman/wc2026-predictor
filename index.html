@@ -914,8 +914,8 @@
   <nav>
     <button class="active" onclick="showPage('groups')">Group Stage</button>
     <button onclick="showPage('knockout')">Knockout</button>
-    <button onclick="showPage('leaderboard')">Leaderboard</button>
     <button onclick="showPage('redemption')">Redemption</button>
+    <button onclick="showPage('leaderboard')">Leaderboard</button>
     <button onclick="showPage('about')">About</button>
     <button id="admin-nav-btn" class="admin-btn" onclick="showPage('admin')">&#9881; Admin</button>
   </nav>
@@ -2663,8 +2663,16 @@ async function renderLeaderboard() {
   renderPredictedChampions(userData);
 
   const scored = Object.entries(userData).map(([id, data]) => {
-    const breakdown = calculatePointsBreakdown(data.predictions || {}, data.knockoutState || {});
-    return { id, name: data.displayName || id, pts: breakdown.total, exactPts: breakdown.exact, resultPts: breakdown.result, oneScorePts: breakdown.oneScore, predictions: data.predictions || {}, knockoutState: data.knockoutState || {} };
+    const split = calculatePointsSplit(data.predictions || {}, data.knockoutState || {});
+    const rPts  = calculateRedemptionPoints(data.redemptionPicks || {}, data.knockoutState || {});
+    const r32acc = countR32Accuracy(data.knockoutState || {});
+    return {
+      id, name: data.displayName || id,
+      pts: split.total + rPts,
+      groupPts: split.group, koPts: split.ko, redemptionPts: rPts,
+      r32Team: r32acc.correctTeam, r32Seed: r32acc.correctSeed,
+      predictions: data.predictions || {}, knockoutState: data.knockoutState || {}
+    };
   }).sort((a,b) => {
     if (b.pts !== a.pts) return b.pts - a.pts;
     // Tiebreaker: closest total predicted goals to actual total goals
@@ -2983,12 +2991,14 @@ function computeActualStandings(letter) {
     else            { stats[m.home].pts+=1; stats[m.away].pts+=1; stats[m.home].d++; stats[m.away].d++; }
   });
   const sorted = [...teams].sort((a,b) => stats[b].pts-stats[a].pts || stats[b].gd-stats[a].gd || stats[b].gf-stats[a].gf || a.localeCompare(b));
-  return { sorted, stats, played, allPlayed: played === matches.length };
+  const allPlayed = played === matches.length;
+  // If most games are played (Matchday 3 complete = 6/6), treat as complete
+  // Use >= 5 to handle any missing data gracefully
+  const effectivelyDone = played >= 5;
+  return { sorted, stats, played, allPlayed: allPlayed || effectivelyDone };
 }
 
-// Build the full redemption bracket state from actual results + redemption picks
 // Get the 8 best actual third-place teams ranked by pts/gd/gf
-// Only includes groups where all 3 matchday 3 games are played
 function getActualBestThirds() {
   const thirds = [];
   Object.keys(GROUPS).forEach(letter => {
@@ -3025,8 +3035,9 @@ function buildRedemptionState() {
       if (seed.startsWith('1') || seed.startsWith('2')) {
         const letter = seed[1];
         const pos = seed.startsWith('1') ? 0 : 1;
-        const { sorted, allPlayed } = computeActualStandings(letter);
-        if (!allPlayed) return null;
+        const { sorted, allPlayed, played } = computeActualStandings(letter);
+        // Show teams even if not all 6 games played — use best available standings
+        if (played === 0) return null;
         return sorted[pos] || null;
       }
       if (seed.startsWith('3')) {
@@ -3146,9 +3157,16 @@ function makeRedemptionRound(label, matchIds, redState) {
   return col;
 }
 
-function renderRedemption() {
+async function renderRedemption() {
   const bracket = document.getElementById('redemption-bracket');
   if (!bracket) return;
+  bracket.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Loading...</div>';
+
+  // Ensure actual results are loaded before rendering
+  if (Object.keys(ACTUAL_RESULTS).length === 0) {
+    await loadActualResults();
+  }
+
   bracket.innerHTML = '';
   bracket.className = 'bracket-two-sides';
 
