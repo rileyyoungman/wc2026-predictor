@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="1.0.33">
+  <meta name="app-version" content="1.0.34">
 <title>World Cup 2026 — Score Predictor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
@@ -3005,11 +3005,7 @@ function getActualBestThirds() {
     if (actual.played >= 3) {
       ({ sorted, stats, played } = actual);
     } else {
-      const predicted = computeGroupStandings(letter);
-      if (!predicted.anyPlayed) return;
-      sorted = predicted.sorted;
-      stats  = predicted.stats;
-      played = 3; // treat as sufficient
+      return; // no actual results for this group yet
     }
     const team = sorted[2]; // 3rd place team
     if (!team) return;
@@ -3045,9 +3041,7 @@ function buildRedemptionState() {
         // Try actual results first
         const actual = computeActualStandings(letter);
         if (actual.played > 0) return actual.sorted[pos] || null;
-        // Fall back to user's group predictions
-        const predicted = computeGroupStandings(letter);
-        if (predicted.anyPlayed) return predicted.sorted[pos] || null;
+        // No actual results yet for this group
         return null;
       }
       if (seed.startsWith('3')) {
@@ -3183,10 +3177,14 @@ function makeRedemptionRound(label, matchIds, redState) {
 async function renderRedemption() {
   const bracket = document.getElementById('redemption-bracket');
   if (!bracket) return;
-  bracket.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Loading...</div>';
+  bracket.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Loading teams...</div>';
 
-  // Always reload actual results to get latest data
-  await loadActualResults();
+  // Load actual results — retry up to 3 times if empty
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await loadActualResults();
+    if (Object.keys(ACTUAL_RESULTS).length > 0) break;
+    await new Promise(r => setTimeout(r, 800));
+  }
 
   bracket.innerHTML = '';
   bracket.className = 'bracket-two-sides';
@@ -3194,9 +3192,11 @@ async function renderRedemption() {
   let redState = {};
   try {
     redState = buildRedemptionState();
+    console.log('Redemption state built. R32_0:', redState['R32_0']);
+    console.log('ACTUAL_RESULTS keys:', Object.keys(ACTUAL_RESULTS).length);
   } catch(e) {
     console.error('buildRedemptionState error:', e);
-    bracket.innerHTML = '<div style="color:#e74c3c;padding:2rem;text-align:center">Error building bracket: ' + e.message + '</div>';
+    bracket.innerHTML = '<div style="color:#e74c3c;padding:2rem;text-align:center">Error: ' + e.message + '</div>';
     return;
   }
 
@@ -3966,7 +3966,7 @@ function showFirstPlacePopup() {
 
 
 // ── CACHE VERSION CHECK ──────────────────────────────────────────────────────
-const CACHE_VERSION = '1.0.33';
+const CACHE_VERSION = '1.0.34';
 
 function showCachePopup() {
   // Build the popup fresh and inject into body
